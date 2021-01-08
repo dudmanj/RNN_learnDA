@@ -232,14 +232,24 @@ while pass <= 800 % stop when reward collection is very good
         e(orig_J == 0) = 0;        
         
 %----------- Computer weight updates
+        % probe network to see whether sensory response is getting enhanced
+        % internally within the network and get consensus lick state transition
+        
+        %*** SWITCH TO INCORPORATE REWARD INTO THIS CALCULATION ****
+%                     % Save predicted error
+%             R_curr(curr_cond)   = mean(err_vector);
+%             R_bar_prev(curr_cond) = R_bar(curr_cond);
+%             R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
+
+        %*** ALSO NEED TO INCORPORATE STIM LICK+ and LICK- PERTURBATION EFFECTS IN HERE ****
+%           Pretty simple should just be a 2x multiplier depending upon detection of anticip licks        
 
         % Using ~DA activity to compute updates (multiply through by derivative of policy during reward delivery component)
-        eta_DA_mult = outputs(1610) - outputs(1599);
-        
-        % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
+        eta_DA_mult = 1 + outputs(rewTime+10) - outputs(rewTime);
 
         % Miconi-like formalism
-        delta_J = -eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
+        delta_J = -eta_J .* .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
+        
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -358,7 +368,7 @@ while pass <= 800 % stop when reward collection is very good
                 plot(outputs,'linewidth',2); hold on; 
                 plot(outputs_uncued,'linewidth',2); 
                 plot(outputs_omit,'linewidth',2); 
-                plot(conv(sum_lcks,lck_gauss./trapz(lck_gauss),'same'),'k-','linewidth',2);
+                plot(conv(sum_lcks,lck_gauss,'same'),'k-');
                 plot(curr_input(1,:),'linewidth',2); plot(curr_input(2,:),'linewidth',2);
             end
             

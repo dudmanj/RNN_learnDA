@@ -469,7 +469,7 @@ gens.dets(index).err
 % index = find(tmp == min(tmp(tmp_g==1.3)),1);
 % index=ii(50);
 % index = find(tmp > 750 & tmp < 1000 & tmpL > 1000 & tmpL < 1500,1);
-index=ii(105)
+index=ii(194)
 gens.dets(index).net.g
 
 % index = ii(round(generations./5));
@@ -501,9 +501,9 @@ switch simulation_type
 
         clear run;
         figure(1); clf;
-        parfor g = 1:6
+        parfor g = 1:24
 
-            net_init = gens.dets(ii(105)).net % diverse initial states
+            net_init = gens.dets(index).net % diverse initial states
             net_init.wIn(net.oUind,:) = [0 0];
             tau_trans = g;
             [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans);
