@@ -1,5 +1,5 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans)
-
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim)
+% note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 monitor = 1;
 
 %--------------- SIMULATION SCRIPT FOR MODEL IN Coddington & Dudman (2018)
@@ -60,9 +60,11 @@ max_delta_J = 0.01;             % prevent very large weight changes (in practice
 dt          = 1;
 tau         = 30;
 dt_div_tau  = dt/tau;
-alpha_R     = 0.9;
+% alpha_R     = 0.9;
+alpha_R     = 0.75;
 alpha_X     = 0.33;
 eta_J       = 5e-5;             % {1e-5 1e-4} range seems most stable for learning
+% eta_J       = 5e-6;             % {1e-5 1e-4} range seems most stable for learning
 eta_wIn     = 1./tau_trans;
 plant_scale = 40;
 net_run.eta_J = eta_J;
@@ -237,6 +239,25 @@ while pass <= 800 % stop when reward collection is very good
         eta_DA_mult = outputs(1610) - outputs(1599);
         
         % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
+        switch stim
+            case -1
+                if numel(find(outputs_t>1098 & outputs_t<1598))>1
+                    stim_bonus = 1;                    
+                else
+                    stim_bonus = 3;
+                end
+                
+            case 0                
+                stim_bonus = 1;                    
+                
+            case 1                
+                if numel(find(outputs_t>1098 & outputs_t<1598))>1
+                    stim_bonus = 3;                    
+                else
+                    stim_bonus = 1;                    
+                end
+                
+        end
 
         % Miconi-like formalism
         delta_J = -eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
@@ -251,26 +272,29 @@ while pass <= 800 % stop when reward collection is very good
         net_out.J = net_out.J + delta_J;
 
 %------------ Calculate the proposed weight changes at inputs
-        curr_val = exp(-median(lat_lck)/500);
-        pred_val_r = net_out.wIn(net.oUind,2) ./ 5; % predicted value at reward
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*(curr_val-pred_val_r);
-        if net_out.wIn(net.oUind,2)>5
-            net_out.wIn(net.oUind,2)=5;
+        curr_val = 1 - (1-exp(-deltaRew/500)); % current reward value normalized over {0,1} like derivative
+%         pred_val_r = eta_DA_mult + stim_bonus; % predicted value at reward
+        pred_val_r = outputs(1599); % predicted value at reward
+        
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*(curr_val-pred_val_r)*stim_bonus;
+        if net_out.wIn(net.oUind,2)>10
+            net_out.wIn(net.oUind,2)=10;
         elseif net_out.wIn(net.oUind,2)<0
             net_out.wIn(net.oUind,2)=0;
         end
         
-        pred_val_c = net_out.wIn(net.oUind,1) ./ 5; % predicted value at reward
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*(pred_val_r-pred_val_c);
-        if net_out.wIn(net.oUind,1)>5
-            net_out.wIn(net.oUind,1)=5;
+        pred_val_c = outputs(110) - outputs(99); % predicted value at cue
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*(curr_val-pred_val_r-pred_val_c);
+        
+        if net_out.wIn(net.oUind,1)>10
+            net_out.wIn(net.oUind,1)=10;
         elseif net_out.wIn(net.oUind,1)<0
             net_out.wIn(net.oUind,1)=0;
         end
         
 %------------------ Calculate the proposed weight changes at inputs
 
-        figure(300); subplot(121); imagesc(net_out.wIn(net.oUind,:),[-1 1]); subplot(122); imagesc([eta_wIn*(curr_val-pred_val_r) eta_wIn*(pred_val_r-pred_val_c)]);                
+        figure(300); subplot(121); imagesc(net_out.wIn(net.oUind,:),[0 10]); subplot(122); imagesc([pred_val_c pred_val_r curr_val],[-1 1]);                
 
         a_delta_J(curr_cond) = median(abs(delta_J(:))); % Save magnitude of change    
         a_sum_err(curr_cond) = err; % Save magnitude of error for this condition   
@@ -358,7 +382,7 @@ while pass <= 800 % stop when reward collection is very good
                 plot(outputs,'linewidth',2); hold on; 
                 plot(outputs_uncued,'linewidth',2); 
                 plot(outputs_omit,'linewidth',2); 
-                plot(conv(sum_lcks,lck_gauss./trapz(lck_gauss),'same'),'k-','linewidth',2);
+                plot(conv(sum_lcks,lck_gauss./max(lck_gauss),'same'),'k-','linewidth',2);
                 plot(curr_input(1,:),'linewidth',2); plot(curr_input(2,:),'linewidth',2);
             end
             

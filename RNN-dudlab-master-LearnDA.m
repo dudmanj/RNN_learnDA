@@ -469,7 +469,7 @@ gens.dets(index).err
 % index = find(tmp == min(tmp(tmp_g==1.3)),1);
 % index=ii(50);
 % index = find(tmp > 750 & tmp < 1000 & tmpL > 1000 & tmpL < 1500,1);
-index=ii(194)
+index=ii(192)
 gens.dets(index).net.g
 
 % index = ii(round(generations./5));
@@ -494,6 +494,7 @@ plot(bin_dat.bins.center,bin_dat.bins.avg,'ko','MarkerSize',10,'MarkerFace','k')
 plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
+stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1];
 
 switch simulation_type
    
@@ -505,8 +506,10 @@ switch simulation_type
 
             net_init = gens.dets(index).net % diverse initial states
             net_init.wIn(net.oUind,:) = [0 0];
-            tau_trans = g;
-            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans);
+            tau_trans = 50;
+            % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
+            stim = stim_list(g);
+            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim);
 
             run(g).output = output;
             run(g).net = net_out;
@@ -525,8 +528,9 @@ end
 % return: net (trained network) and output (end of training simulation)
 
 %% Summary display plot for talks of training experience.
-
+clear model model_runs;
 [err_map] = TNC_CreateRBColormap(numel(run),'cpb'); 
+[stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 cost = 500;
 % visualize training error:
 latency_cost = cost * (1-exp(-[0:1:1500]/250)');
@@ -605,7 +609,11 @@ for g=1:numel(run)
     latency(latency>1500) = 1500;
     
     figure(501);
-    plot(sgolayfilt(model(g).anticip,3,21),sgolayfilt(model(g).latency,3,21),'color',err_map(g,:)./2); hold on;
+%     plot(sgolayfilt(model(g).anticip,3,21),sgolayfilt(model(g).latency,3,21),'color',err_map(g,:)./2); hold on;
+    model_runs.anticip(g,:) = model(g).anticip;
+    model_runs.latency(g,:) = model(g).latency;
+    
+%     plot(sgolayfilt(model(g).anticip,3,21),sgolayfilt(model(g).latency,3,21),'color',stim_map(stim_list(g)+2,:)); hold on;
     
     figure(502); subplot(4,6,g); imagesc(run(g).pred_da_move+100*run(g).pred_da_sense);
 
@@ -624,9 +632,19 @@ for pp=1:numel(lick_counts_u)
 end
 
 figure(501);
-    plot(sgolayfilt(model_runs.anticip_d,3,21) , sgolayfilt(model_runs.latency_d,3,21) ,'w', 'linewidth', 3 ); hold on;
+    for sg = 1:3
+        plot(sgolayfilt(mean(model_runs.anticip([1:8]+(sg-1)*8,:)),3,21),sgolayfilt(mean(model_runs.latency([1:4]+(sg-1)*4,:)),3,21),'color',stim_map(sg,:)); hold on;
+    end
+%     plot(model_runs.anticip_d , model_runs.latency_d ,'w', 'linewidth', 3 ); hold on;
             title('Cost surface'); ylabel('Latency (ms)'); xlabel('Anticipatory licks');
 
+figure(601); clf;
+            
+    for sg = 1:3
+     plot(0:5:800,sgolayfilt(mean(model_runs.anticip([1:8]+(sg-1)*8,:)),3,21),'color',stim_map(sg,:),'linewidth',2); hold on;
+    end
+    legend('Lick-','Control','Lick+');
+ylabel('Anticipatory licks'); xlabel('Training trials'); 
 all_latency = zeros(numel(run) , 200); 
 all_latency_u = zeros(numel(run) , 200); 
 
