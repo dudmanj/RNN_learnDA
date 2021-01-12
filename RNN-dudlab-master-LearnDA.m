@@ -655,6 +655,7 @@ for kk=1:numel(run)
     all_latency(kk,1:numel(model(kk).latency)) = model(kk).latency(1,1:numel(model(kk).latency));
     all_latency_u(kk,1:numel(model(kk).latency_u)) = model(kk).latency_u(1,1:numel(model(kk).latency_u));
 end
+box off;
 
 figure(503); clf;
     shadedErrorBar( [1:200]*run(1).net.update  , mean(all_latency,1) , std(all_latency,[],1)./sqrt(size(all_latency,1)) , {'color',[1 0.1 0.2]}); hold on;
