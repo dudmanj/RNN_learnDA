@@ -87,7 +87,7 @@ for i = 1:niters
                 deltax  = x - x_bar; 
                 de      = rprev*deltax';
 %                 e       = e + learn_func_handle(de);                      % supra-linear (must maintain sign)
-                e       = e + learn_func_handle(de) - (e_decay*e);          % supra-linear (must maintain sign)
+                e       = e + learn_func_handle((de)) - (e_decay*e);          % supra-linear (must maintain sign)
             end
         end
         e_store(:,:,i) = e;

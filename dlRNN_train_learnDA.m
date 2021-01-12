@@ -241,18 +241,23 @@ while pass <= 800 % stop when reward collection is very good
         % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
         switch stim
             case -1
+                
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;                    
                 else
-                    stim_bonus = 3;
+%                     stim_bonus = -0.25;  % this does actually work but hard to make sense of 
+                    stim_bonus = 5;  % this does actually work                  
                 end
                 
-            case 0                
-                stim_bonus = 1;                    
+            case 0
                 
-            case 1                
+                % do nothing
+                    stim_bonus = 1;                    
+                
+            case 1
+                
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 3;                    
+                    stim_bonus = 5;                    
                 else
                     stim_bonus = 1;                    
                 end
@@ -284,7 +289,7 @@ while pass <= 800 % stop when reward collection is very good
         end
         
         pred_val_c = outputs(110) - outputs(99); % predicted value at cue
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*(curr_val-pred_val_r-pred_val_c);
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*(curr_val-pred_val_r-pred_val_c)*stim_bonus;
         
         if net_out.wIn(net.oUind,1)>10
             net_out.wIn(net.oUind,1)=10;
