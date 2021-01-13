@@ -40,10 +40,6 @@ e           = zeros(size(net.J));
 de          = zeros(size(net.J));
 e_store  = zeros([size(net.J) niters]);
 
-% i_bounce = 0.2;
-% dI = i_bounce.*(rand(size(net.wIn))-0.5);
-% dI(this_P_perturb < rand(size(net.wIn))) = 0;
-
 for i = 1:niters
     
         i_input     = net.wIn*curr_input(:,i);
@@ -63,7 +59,6 @@ for i = 1:niters
         
         % Sum activation changes together
         if this_P_perturb ~= -1
-%             x = x + net.dt_div_tau*excitation + dx;
             x = x + net.dt_div_tau*excitation + dx;
         else
             x = x + net.dt_div_tau*excitation;
@@ -86,13 +81,13 @@ for i = 1:niters
             if learn_inputs
                 deltax  = learn_func_handle( x - x_bar ); 
                 de      = rprev*deltax';
-%                 e       = e + de;                                      % supra-linear (must maintain sign)   ORIGINAL MICONI FORMULATION             
-                e       = e + de - (e_decay*e);                                      % supra-linear (must maintain sign)                
+%                 e       = e + de;                                         % supra-linear (must maintain sign)   ORIGINAL MICONI FORMULATION             
+                e       = e + de - (e_decay*e);                             % supra-linear (must maintain sign)                
             else
                 deltax  = x - x_bar; 
                 de      = rprev*deltax';
-%                 e       = e + learn_func_handle(de);         % supra-linear (must maintain sign)
-                e       = e + learn_func_handle(de) - (e_decay*e);         % supra-linear (must maintain sign)
+%                 e       = e + learn_func_handle(de);                      % supra-linear (must maintain sign)
+                e       = e + learn_func_handle((de)) - (e_decay*e);          % supra-linear (must maintain sign)
             end
         end
         e_store(:,:,i) = e;
@@ -101,9 +96,9 @@ for i = 1:niters
         x_bar = net.alpha_X * x_bar + (1.0 - net.alpha_X) * x;
         i_bar =  net.alpha_X * i_bar + (1.0 - net.alpha_X) * i_input;
 
-        outputs(1:net.B,i)      = z;
-        hidden_r(:,i)              = r;
-        hidden_x(:,i)             = x;
+        outputs(1:net.B,i)    = z;
+        hidden_r(:,i)         = r;
+        hidden_x(:,i)         = x;
 
 end
 

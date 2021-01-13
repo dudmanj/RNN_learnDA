@@ -7,8 +7,6 @@ test_error  = Inf;
 [cm]        = TNC_CreateRBColormap(1024,'rb');
 cost        = 500;
 w_var       = 0.25;
-% w_var       = 0.33;
-% w_var=0;
 error_reps  = 50;
 
 % parameters
@@ -61,7 +59,7 @@ for cond = 1:length(target_list)
             opp_cost = 2;
         end
 
-        err = opp_cost * cost * (  1-exp(-deltaRew/250) ) + (cost * sum(abs(diff(outputs(1,500:3000)))) * w_var); % penalizing oscillatory solutions
+        err = opp_cost * cost * (  1-exp(-deltaRew/250) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
 
         err_vector(qq) = err;
         err_vector_ant(qq) = (cost * sum(abs(diff(outputs))) * w_var);
