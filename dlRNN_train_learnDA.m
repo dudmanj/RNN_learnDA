@@ -66,7 +66,9 @@ alpha_X     = 0.33;
 eta_J       = 5e-5;             % {1e-5 1e-4} range seems most stable for learning
 % eta_J       = 5e-6;             % {1e-5 1e-4} range seems most stable for learning
 eta_wIn     = 1./tau_trans;
-plant_scale = 40;
+
+plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
+
 net_run.eta_J = eta_J;
 
 update      = 5;                % How frequently to monitor learning
@@ -124,7 +126,7 @@ for cond = 1:length(target_list)
                 deltaRew = size(curr_input,2)-rewTime; % / numel([rewTime:numel(curr_input)]);
             end
             
-            err_vector(qq) = cost * (  1-exp(-deltaRew/250) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
+            err_vector(qq) = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
             
             lat_lck(qq) = deltaRew;
             anticip_lck(qq) = numel(find(outputs_t<rewTime));
@@ -257,7 +259,7 @@ while pass <= 800 % stop when reward collection is very good
             case 1
                 
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 5;                    
+                    stim_bonus = 20;                    
                 else
                     stim_bonus = 1;                    
                 end

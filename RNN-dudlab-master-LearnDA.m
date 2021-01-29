@@ -9,9 +9,9 @@
 % 5) Another idea is that there is a learning rate output unit trained on the network. Not sure what objective to use for this, but an interesting idea.
 
 %% theoretical minimum error
-lick_k = TNC_CreateGaussian(200,5,400,1);
+lick_k = TNC_CreateGaussian(200,4,400,1);
 % lick_k(1:200)=0;
-its = 200;
+its = 100;
 l_its_max=4;
 delay = zeros(l_its_max,its);
 delay_u = zeros(l_its_max,its);
@@ -22,12 +22,12 @@ for l_its=1:l_its_max
     licks = zeros(its,3000);
     for kk=1:its
 
-        put_policy = [zeros(1,100) ones(1,2400) zeros(1,500)].*(0*(l_its-1))+[zeros(1,100) ones(1,10).*0 zeros(1,1590) ones(1,10).*0.05.*(l_its-1).^2 zeros(1,1290)];        
+        put_policy = [zeros(1,100) ones(1,2400) zeros(1,500)].*(0*(l_its-1))+[zeros(1,100) ones(1,10).*0 zeros(1,1590) ones(1,10).*0.075.*(l_its-1).^2 zeros(1,1290)];        
         outputs_t = dlRNN_Pcheck_transfer(put_policy);
         tmp = find(outputs_t>1600,1);
         delay_u(l_its,kk) = outputs_t(tmp)-1600;
 
-        put_policy = [zeros(1,500) ones(1,2000) zeros(1,500)].*(0.0004*(l_its-1).^2)+[zeros(1,100) ones(1,10).*0.005.*(l_its-1).^2 zeros(1,1590) ones(1,10).*0.05.*(l_its-1).^2 zeros(1,1290)];        
+        put_policy = [zeros(1,400) ones(1,2100) zeros(1,500)].*(0.001*(l_its-1).^2)+[zeros(1,100) ones(1,10).*0.065.*(l_its-1).^2 zeros(1,1590) ones(1,10).*0.085.*(l_its-1).^2 zeros(1,1290)];        
         outputs_t = dlRNN_Pcheck_transfer(put_policy);
         tmp = find(outputs_t>1600,1);
         delay(l_its,kk) = outputs_t(tmp)-1600;
@@ -38,8 +38,8 @@ for l_its=1:l_its_max
     end
 %     subplot(4,1,l_its);
 
-    subplot(2,3,1:2); plot(mean(licks)); hold on; xlabel('Time (ms)'); ylabel('Licking'); box off; legend; axis([ 0 3000 0 0.005]);
-    subplot(2,3,4:5); plot(put_policy); hold on; xlabel('Time (ms)'); ylabel('Policy'); box off; axis([ 0 3000 0 0.01]);
+    subplot(2,3,1:2); plot(mean(licks)); hold on; xlabel('Time (ms)'); ylabel('Licking'); box off; legend; axis([ 0 3000 0 0.01]);
+    subplot(2,3,4:5); plot(put_policy); hold on; xlabel('Time (ms)'); ylabel('Policy'); box off; axis([ 0 3000 0 0.025]);
     subplot(2,3,[3 6]); hold off; plot(1:l_its,mean(delay(1:l_its,:),2),'r'); hold on; plot(1:l_its,mean(delay_u(1:l_its,:),2),'k'); legend('Cued','Uncued'); xlabel('Learning stage'); ylabel('Latency (ms)'); box off;
     
     
@@ -47,6 +47,59 @@ end
 % mean(cost)
 % std(cost)
 % mean(delay)
+
+
+%% Good way to illustrate properties of the plant?
+
+% Show putative policies across learning, raster plots of licking data for each policy, lick peths, compare to behavioral data?
+% 
+filter1 = TNC_CreateGaussian(1000,50,2000,1)
+colors = [0 0.67 1 ; 0.5 0.5 0.67 ; 1 0.33 0.33]
+
+% filter1(1:100) = 0;
+% filter2 = TNC_CreateGaussian(105,10,200,1)./1.11;
+% filter2(1:105) = 0;
+% filter = filter1-filter2;
+% figure(2); clf; plot(filter);
+% 
+% activity = [zeros(1,300) ones(1,700)];
+% figure(3); clf;
+% plot(activity); hold on;
+% plot(conv(activity,filter,'same'));
+
+figure(4); clf;
+reps = 100;
+pol_vec = [0.1 0.25 1]
+
+for p=pol_vec
+    
+    activity = conv([zeros(1,300) ones(1,1300)*p ones(1,1400)*p],filter1,'same');
+    
+    raster.x = []; raster.y = []; peth = zeros(1,3000);
+    for pp=1:reps
+        [checks,state] = dlRNN_Pcheck_transfer(activity);
+        if numel(checks)>0
+            raster.y = [raster.y ones(1,numel(checks))*pp];
+            raster.x = [raster.x checks];
+        end
+        peth(raster.x) = peth(raster.x)+1;
+    end
+    
+%     subplot(1,numel([0.1 0.5 0.75]),find(p==[0.1 0.5 0.75])); plot(raster.x,raster.y,'k.'); hold on; plot(100*conv(peth./reps,[0 ones(1,60)./60 0],'same')-105); axis([0 3000 -105 reps+1]); plot(activity*100-105); box off;
+    subplot(312); 
+        plot(raster.x,raster.y+reps*(find(p==pol_vec)-1),'k.','color',colors(find(p==pol_vec),:)); hold on;
+        axis([0 2.5e3 0 reps*3]); box off; axis off;
+    subplot(313)
+        plot(conv(peth./reps,[0 ones(1,80)./80 0],'same'),'color',colors(find(p==pol_vec),:)); hold on; box off;
+        axis([0 2.5e3 0 0.5]); plot([1600 1600],[0 1],'k-');
+    subplot(311)
+        plot(activity,'color',colors(find(p==pol_vec),:)); hold on;box off;
+        axis([0 2.5e3 0 1]);
+    
+end
+    
+    
+
 
 %% construct the inputs & define training target 
 
@@ -207,7 +260,7 @@ actLogic = 0;
 N   = 50;              % RNN Units
 B   = size(target{1},1);% Outputs
 I   = size(input{1},1); % Inputs
-p   = 1;                % Sparsity
+p   = 0.5;                % Sparsity
 % p   = 0.2;                % Sparsity
 % g   = 1;            % Spectral scaling
 % g   = 3;              % Sub-spectral scaling
@@ -364,21 +417,26 @@ evol.out = zeros(generations,size(input{1},2));
 
 % N_vec = [50 100 150 200 250];
 % g_vec = [ 0.5 0.8 1 1.3 1.5 2 3];
-g_vec = [1.3];
+% g_vec = [0.5 1 1.3 1.5];
+g_vec = 1.3;
+% net.p = 1;
 % tau_vec = [5 10 20 25 50];
-tau_vec = [20];
+% tau_vec = [20];
+% p_vec = [0.25 0.5 0.75 1];
+p_vec = 0.5;
 
 for jj=1:generations
     
 %     net.N   = N_vec(randperm(5,1));
     net.g   = g_vec(randperm(numel(g_vec),1));
-    net.tau = tau_vec(randperm(numel(tau_vec),1));    
+%     net.tau = tau_vec(randperm(numel(tau_vec),1));    
+    net.p = p_vec(randperm(numel(p_vec),1));    
     
     J = zeros(net.N,net.N);
     for i = 1:net.N
         for j = 1:net.N
-            if rand <= p
-                J(i,j) = net.g * randn / sqrt(p*net.N);
+            if rand <= net.p
+                J(i,j) = net.g * randn / sqrt(net.p*net.N);
             end
         end
     end
@@ -423,6 +481,7 @@ for jj=1:generations
     evol.out(jj,:) = mean(export_outputs,1);
     evol.g(jj) = net.g;
     evol.tau(jj) = net.tau;
+    evol.p(jj) = net.p;
     gens.dets(jj).net = net;
     gens.dets(jj).err = test_error;
     gens.dets(jj).out = mean(export_outputs,1);
@@ -441,16 +500,18 @@ end
 [bb,ii]=sort(evol.err);
 [bbb,iii]=sort(evol.lag);
 
-figure(9); subplot(1,6,1:3); imagesc(evol.out(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
-subplot(1,6,4); plot(evol.lag(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Collect latency');
+figure(9); subplot(1,6,1:2); imagesc(evol.out(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
+subplot(1,6,3); plot(evol.lag(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Collect latency');
+subplot(1,6,4); plot(evol.p(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Sparsity');
 subplot(1,6,5); semilogx(evol.g(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('g');
 subplot(1,6,6); plot(abs(evol.eig(ii)),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('eig'); set(gca,'TickDir','out');
 
 
 figure(8); clf;
-subplot(2,2,1); plot(evol.g,evol.err,'k+'); box off; xlabel('g'); ylabel('error');
-% subplot(2,2,2); plot(tmp_g,tmp_tau,'ko'); 
-subplot(2,2,4); semilogx(evol.tau,evol.err,'k+'); box off; xlabel('tau'); ylabel('error'); 
+subplot(1,3,1); plot(evol.g,evol.err,'k+'); box off; xlabel('g'); ylabel('error');
+subplot(1,3,2); plot(evol.p,evol.err,'k+'); box off; xlabel('p'); ylabel('error');
+subplot(1,3,3); plot(evol.eig.^2,evol.err,'k+'); box off; xlabel('eig'); ylabel('error');
+% subplot(2,2,4); semilogx(evol.tau,evol.err,'k+'); box off; xlabel('tau'); ylabel('error'); 
 
 %----------------------------------------------
 % Find median initialized network
@@ -460,7 +521,7 @@ subplot(2,2,4); semilogx(evol.tau,evol.err,'k+'); box off; xlabel('tau'); ylabel
 % index = find(tmp > median(tmp(tmp_g==2)),1);
 index = ii(1);
 net = gens.dets(index).net;
-figure(10); clf; subplot(211); plot(gens.dets(index).out); title('Optimal g=2 evolved '); box off;ylabel('Output unit');
+figure(10); clf; subplot(211); plot(gens.dets(index).out); title('Optimal evolved '); box off;ylabel('Output unit'); axis([0 numel(gens.dets(1).out) -1 1]);
 gens.dets(index).err
 
 % take best 15 ms tau network
@@ -470,17 +531,34 @@ gens.dets(index).err
 % index=ii(50);
 % index = find(tmp > 750 & tmp < 1000 & tmpL > 1000 & tmpL < 1500,1);
 index=ii(192)
+% index=ii(round(generations/2))
 gens.dets(index).net.g
 
 % index = ii(round(generations./5));
 net = gens.dets(index).net;
 net_init = gens.dets(index).net;
 % gens.dets(index).err
-figure(10); subplot(212); plot(gens.dets(index).out); title('Median tau=2000ms evolved ');  xlabel('Time'); ylabel('Output unit'); box off;
+figure(10); subplot(212); plot(gens.dets(index).out); title('Median evolved ');  xlabel('Time'); ylabel('Output unit'); box off; axis([0 numel(gens.dets(1).out) -1 1]);
 
 % net.wIn(net.oUind,:) = 0;
 
 figure(11); clf; plot(eig(gens.dets(ii(1)).net.J),'o'); hold on; plot(eig(gens.dets(index).net.J),'o');
+
+
+figure(12); clf; % plot a bunch of example outputs
+indices = [ii(1) ii(randperm(500,10))];
+[cost_map] = TNC_CreateRBColormap(max(evol.lag),'wblue');
+
+for index=indices
+    net = gens.dets(index).net;
+    if index==indices(1)
+        plot(gens.dets(index).out,'linewidth',3,'color',cost_map(round(evol.lag(index)-min(evol.lag(indices)))+1,:)); hold on;
+    else
+        plot(gens.dets(index).out,'linewidth',1,'color',cost_map(round(evol.lag(index)-min(evol.lag(indices)))+1,:)); hold on;
+    end
+end
+title('Optimal evolved '); box off; ylabel('Output unit'); axis([0 numel(gens.dets(1).out) -1 1]);
+
 
 %% Compute the empirical anticipatory licking cost function
 emp_ant_cost = polyfit(evol.ant_lck,evol.err_ant,2) 
@@ -494,8 +572,9 @@ plot(bin_dat.bins.center,bin_dat.bins.avg,'ko','MarkerSize',10,'MarkerFace','k')
 plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
-stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1];
-stim_list = [stim_list stim_list stim_list];
+% stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1];
+% stim_list = [stim_list stim_list stim_list];
+stim_list = zeros(1,12);
 
 switch simulation_type
    
@@ -503,13 +582,15 @@ switch simulation_type
 
         clear run;
         figure(1); clf;
-        parfor g = 1:numel(stim_list)
+%         parfor g = 1:numel(stim_list)
+        parfor g = 1:12
 
             net_init = gens.dets(index).net % diverse initial states
             net_init.wIn(net.oUind,:) = [0 0];
-            tau_trans = 25;
+            tau_trans = randperm(20,1)+10;
             % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
             stim = stim_list(g);
+%             stim = 0;
             [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim);
 
             run(g).output = output;
@@ -635,10 +716,11 @@ figure(501);
 stim_cat = [-1 0 1];
     for sg = 1:3
         inds = find(stim_list==stim_cat(sg));
-        plot(sgolayfilt(mean(model_runs.anticip(inds,:)),3,21),sgolayfilt(mean(model_runs.latency(inds,:)),3,21),'color',stim_map(sg,:)); hold on;
+%         plot(sgolayfilt(mean(model_runs.anticip(inds,:)),3,21),sgolayfilt(mean(model_runs.latency(inds,:)),3,21),'color',stim_map(sg,:),'linewidth',3); hold on;
+        plot(sgolayfilt(mean(model_runs.anticip(inds,:)),3,21),sgolayfilt(mean(model_runs.latency(inds,:)),3,21),'color',[1 1 1],'linewidth',3); hold on;
     end
 %     plot(model_runs.anticip_d , model_runs.latency_d ,'w', 'linewidth', 3 ); hold on;
-            title('Cost surface'); ylabel('Latency (ms)'); xlabel('Anticipatory licks');
+            title('Cost surface'); ylabel('Latency (ms)'); xlabel('Anticipatory licks'); box off;
 
 figure(601); clf;
             

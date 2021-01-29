@@ -1,8 +1,45 @@
 function [checks,varargout] = dlRNN_Pcheck_transfer(activity)
 
 option = 'state_simple';
+trans_prob = 'high-pass';
 plotFlag = 0;
 reaction_time = 45;
+
+% Original idea was just to scale this down
+plant_scale = 50; 
+
+% However a better version is really a high pass filter of activity
+filter1 = TNC_CreateGaussian(100,4,200,1);
+filter1(1:100) = 0;
+filter2 = TNC_CreateGaussian(103,10,200,1)./1.075;
+filter2(1:103) = 0;
+filter = filter1-filter2;
+
+% transform normalized activity into rate parameter for lick plant
+switch trans_prob
+    
+    case 'pass-thru'
+        activity = activity ./ plant_scale;
+        
+    case 'non-linear'
+        kn = TNC_CreateGaussian(500,200,1000,1);
+        kn_c = cumsum(kn);
+        activity(activity<0) = 0;
+        activity = kn_c((round(activity*1000)+1));
+        activity = activity ./ plant_scale;
+        
+    case 'high-pass'
+        kn = TNC_CreateGaussian(500,200,1000,1);
+        kn_c = cumsum(kn);
+        re_act = activity.*1000;
+        re_act(re_act<1) = 1;
+        re_act(re_act>1000) = 1000;
+        activity = kn_c((round(re_act)));
+
+        activity = conv(activity,filter,'same');
+        
+end
+
 
 switch option
 
@@ -41,8 +78,6 @@ switch option
         lick_template   = zeros(1,numel(activity));
         lick_template(1:120:numel(activity)) = 1;
         
-%         norm_activity(activity>0)   = activity(activity>0);
-%         norm_activity               = norm_activity + back_p;
         norm_activity     = activity + back_p;
         rand_chks          = rand(1,numel(activity));
         
