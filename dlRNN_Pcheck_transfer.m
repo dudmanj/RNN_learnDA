@@ -2,8 +2,9 @@ function [checks,varargout] = dlRNN_Pcheck_transfer(activity)
 
 option = 'state_simple';
 trans_prob = 'high-pass';
+% trans_prob = 'pass-thru';
 plotFlag = 0;
-reaction_time = 45;
+reaction_time = 180;
 
 % Original idea was just to scale this down
 plant_scale = 50; 

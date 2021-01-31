@@ -259,7 +259,7 @@ while pass <= 800 % stop when reward collection is very good
             case 1
                 
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 20;                    
+                    stim_bonus = 5;                    
                 else
                     stim_bonus = 1;                    
                 end
@@ -338,7 +338,7 @@ while pass <= 800 % stop when reward collection is very good
             lat_lck = zeros(1,error_reps);
             o_tc = []; o_ti = [];
             
-            for qq=1:error_reps
+            for qq=1:10
                 % pass output through the transfer function
                 outputs_t = transfer_func_handle(outputs./plant_scale);           
                 outputs_t_o = transfer_func_handle(outputs_omit./plant_scale);           
@@ -389,7 +389,7 @@ while pass <= 800 % stop when reward collection is very good
                 plot(outputs,'linewidth',2); hold on; 
                 plot(outputs_uncued,'linewidth',2); 
                 plot(outputs_omit,'linewidth',2); 
-                plot(conv(sum_lcks,lck_gauss./max(lck_gauss),'same'),'k-','linewidth',2);
+                plot(conv(sum_lcks,lck_gauss./max(lck_gauss),'same')./update,'k-','linewidth',2);
                 plot(curr_input(1,:),'linewidth',2); plot(curr_input(2,:),'linewidth',2);
             end
             

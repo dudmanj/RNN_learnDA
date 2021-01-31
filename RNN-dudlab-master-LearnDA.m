@@ -423,7 +423,7 @@ g_vec = 1.3;
 % tau_vec = [5 10 20 25 50];
 % tau_vec = [20];
 % p_vec = [0.25 0.5 0.75 1];
-p_vec = 0.5;
+p_vec = 0.9;
 
 for jj=1:generations
     
@@ -530,17 +530,6 @@ gens.dets(index).err
 % index = find(tmp == min(tmp(tmp_g==1.3)),1);
 % index=ii(50);
 % index = find(tmp > 750 & tmp < 1000 & tmpL > 1000 & tmpL < 1500,1);
-index=ii(192)
-% index=ii(round(generations/2))
-gens.dets(index).net.g
-
-% index = ii(round(generations./5));
-net = gens.dets(index).net;
-net_init = gens.dets(index).net;
-% gens.dets(index).err
-figure(10); subplot(212); plot(gens.dets(index).out); title('Median evolved ');  xlabel('Time'); ylabel('Output unit'); box off; axis([0 numel(gens.dets(1).out) -1 1]);
-
-% net.wIn(net.oUind,:) = 0;
 
 figure(11); clf; plot(eig(gens.dets(ii(1)).net.J),'o'); hold on; plot(eig(gens.dets(index).net.J),'o');
 
@@ -558,6 +547,18 @@ for index=indices
     end
 end
 title('Optimal evolved '); box off; ylabel('Output unit'); axis([0 numel(gens.dets(1).out) -1 1]);
+
+index=ii(98)
+% index=ii(round(generations/2))
+gens.dets(index).net.g
+
+% index = ii(round(generations./5));
+net = gens.dets(index).net;
+net_init = gens.dets(index).net;
+% gens.dets(index).err
+figure(10); subplot(212); plot(gens.dets(index).out); title('Median evolved ');  xlabel('Time'); ylabel('Output unit'); box off; axis([0 numel(gens.dets(1).out) -1 1]);
+
+% net.wIn(net.oUind,:) = 0;
 
 
 %% Compute the empirical anticipatory licking cost function
@@ -582,15 +583,14 @@ switch simulation_type
 
         clear run;
         figure(1); clf;
-%         parfor g = 1:numel(stim_list)
-        parfor g = 1:12
+        parfor g = 1:numel(stim_list)
 
             net_init = gens.dets(index).net % diverse initial states
             net_init.wIn(net.oUind,:) = [0 0];
-            tau_trans = randperm(20,1)+10;
+%             tau_trans = randperm(30,1)+40;
+            tau_trans = 40;
             % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
             stim = stim_list(g);
-%             stim = 0;
             [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim);
 
             run(g).output = output;
