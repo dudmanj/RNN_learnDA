@@ -1,6 +1,6 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim)
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
-monitor = 1;
+global monitor;
 
 %--------------- SIMULATION SCRIPT FOR MODEL IN Coddington & Dudman (2018)
             t           = 1:800;
@@ -115,7 +115,7 @@ for cond = 1:length(target_list)
         for qq=1:error_reps
             
             % pass output through the transfer function
-            outputs_t = transfer_func_handle(outputs./plant_scale);            
+            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
 
             % Calculate error as a function something like:
             rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
@@ -191,7 +191,7 @@ while pass <= 800 % stop when reward collection is very good
         for qq=1:error_reps
             
             % pass output through the transfer function
-            outputs_t = transfer_func_handle(outputs./plant_scale);            
+            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
 
             % Calculate error as a function something like:
             rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
@@ -340,9 +340,9 @@ while pass <= 800 % stop when reward collection is very good
             
             for qq=1:10
                 % pass output through the transfer function
-                outputs_t = transfer_func_handle(outputs./plant_scale);           
-                outputs_t_o = transfer_func_handle(outputs_omit./plant_scale);           
-                outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale);           
+                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);           
+                outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
+                outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale);           
 
                 % Calculate error as a function something like:
                 rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
@@ -470,7 +470,7 @@ while pass <= 800 % stop when reward collection is very good
         % Find state transitions in behavior
         pred_da_time = zeros(1,size(hidden_r,2));
         for qq=1:error_reps
-            [outputs_t,state] = transfer_func_handle(outputs./plant_scale);
+            [outputs_t,state] = transfer_func_handle(outputs./plant_scale,filt_scale);
             all_inits = find([0 diff(state)]==1);
             cons_inits = find(all_inits>rewTime,1);
             if numel(cons_inits)>0
@@ -490,7 +490,7 @@ while pass <= 800 % stop when reward collection is very good
         % Find state transitions in behavior
         pred_da_time_u = zeros(1,size(hidden_r_uncued,2));
         for qq=1:error_reps
-            [outputs_t_u,state_u] = transfer_func_handle(outputs_uncued);
+            [outputs_t_u,state_u] = transfer_func_handle(outputs_uncued,filt_scale);
             all_inits_u = find([0 diff(state_u)]==1);
             cons_inits_u = find(all_inits_u>rewTime,1);
             if numel(cons_inits_u)>0
@@ -520,7 +520,7 @@ while pass <= 800 % stop when reward collection is very good
             subplot(224);
             imagesc(pred_da_sense_u);
         else            
-            if mod(pass,200) == 0
+            if mod(pass,200) == 0 & monitor==1
                 disp(['Error: ' num2str(test_error) ' --- Median delta_J: ' num2str(median(a_delta_J)) ' --- %Clipped: ' num2str(median(percentClipped))])
             end
         end

@@ -1,20 +1,23 @@
-function [checks,varargout] = dlRNN_Pcheck_transfer(activity)
+function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale)
 
 option = 'state_simple';
-trans_prob = 'high-pass';
-% trans_prob = 'pass-thru';
+% trans_prob = 'non-linear';
+trans_prob = 'pass-thru';
 plotFlag = 0;
-reaction_time = 180;
+reaction_time = 200;
 
 % Original idea was just to scale this down
-plant_scale = 50; 
+plant_scale = filt_scale; 
 
 % However a better version is really a high pass filter of activity
-filter1 = TNC_CreateGaussian(100,4,200,1);
+filter1 = TNC_CreateGaussian(100,7,200,1);
 filter1(1:100) = 0;
-filter2 = TNC_CreateGaussian(103,10,200,1)./1.075;
-filter2(1:103) = 0;
+% filter2 = TNC_CreateGaussian(103,10,200,1)./1.055;
+filter2 = TNC_CreateGaussian(100,10,200,1)./filt_scale;
+filter2(1:100) = 0;
 filter = filter1-filter2;
+figure(200); plot(filter);
+figure(201); hold on; plot(conv([zeros(1,500) ones(1,1000)],filter,'same'));
 
 % transform normalized activity into rate parameter for lick plant
 switch trans_prob
@@ -25,9 +28,10 @@ switch trans_prob
     case 'non-linear'
         kn = TNC_CreateGaussian(500,200,1000,1);
         kn_c = cumsum(kn);
-        activity(activity<0) = 0;
-        activity = kn_c((round(activity*1000)+1));
-        activity = activity ./ plant_scale;
+        re_act = activity.*1000;
+        re_act(re_act<1) = 1;
+        re_act(re_act>1000) = 1000;
+        activity = kn_c((round(re_act))) ./ plant_scale;
         
     case 'high-pass'
         kn = TNC_CreateGaussian(500,200,1000,1);
@@ -75,7 +79,7 @@ switch option
         state           = zeros(1,numel(activity));
         checks_tmp      = zeros(1,numel(activity));
         norm_activity   = zeros(1,numel(activity));
-        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./50);
+        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./125);
         lick_template   = zeros(1,numel(activity));
         lick_template(1:120:numel(activity)) = 1;
         
@@ -132,11 +136,3 @@ end
 
 varargout{1}=state;
         
-%% USEFUL FOR TESTING SETTINGS
-% for pp=1:100
-%    [checks] = dlRNN_Pcheck_transfer(ones(1,1000));
-%    hmm(pp) = min(checks);
-% end
-% 
-% mean(hmm)
-% std(hmm)

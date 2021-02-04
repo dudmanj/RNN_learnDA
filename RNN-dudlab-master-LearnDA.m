@@ -23,12 +23,12 @@ for l_its=1:l_its_max
     for kk=1:its
 
         put_policy = [zeros(1,100) ones(1,2400) zeros(1,500)].*(0*(l_its-1))+[zeros(1,100) ones(1,10).*0 zeros(1,1590) ones(1,10).*0.075.*(l_its-1).^2 zeros(1,1290)];        
-        outputs_t = dlRNN_Pcheck_transfer(put_policy);
+        outputs_t = dlRNN_Pcheck_transfer(put_policy,1.07);
         tmp = find(outputs_t>1600,1);
         delay_u(l_its,kk) = outputs_t(tmp)-1600;
 
         put_policy = [zeros(1,400) ones(1,2100) zeros(1,500)].*(0.001*(l_its-1).^2)+[zeros(1,100) ones(1,10).*0.065.*(l_its-1).^2 zeros(1,1590) ones(1,10).*0.085.*(l_its-1).^2 zeros(1,1290)];        
-        outputs_t = dlRNN_Pcheck_transfer(put_policy);
+        outputs_t = dlRNN_Pcheck_transfer(put_policy,1.07);
         tmp = find(outputs_t>1600,1);
         delay(l_its,kk) = outputs_t(tmp)-1600;
         cost(l_its,kk) = 500 * (  1-exp(-delay(kk)/500) );
@@ -97,9 +97,6 @@ for p=pol_vec
         axis([0 2.5e3 0 1]);
     
 end
-    
-    
-
 
 %% construct the inputs & define training target 
 
@@ -252,6 +249,7 @@ end
 % actFunType = 'linear' 
 % actLogic = 1;
 actFunType = 'tanh' 
+global monitor;
 actLogic = 0;
     lognorm    = 1;     % Use log normal distribution input weights
 
@@ -575,7 +573,7 @@ plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 %% train the RNN
 % stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1];
 % stim_list = [stim_list stim_list stim_list];
-stim_list = zeros(1,12);
+stim_list = zeros(1,6);
 
 switch simulation_type
    
@@ -588,10 +586,10 @@ switch simulation_type
             net_init = gens.dets(index).net % diverse initial states
             net_init.wIn(net.oUind,:) = [0 0];
 %             tau_trans = randperm(30,1)+40;
-            tau_trans = 40;
+            tau_trans = 65;
             % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
             stim = stim_list(g);
-            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim);
+            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,1.07);
 
             run(g).output = output;
             run(g).net = net_out;
@@ -749,8 +747,93 @@ axis([0 200 0 1500]);
 figure(500); boxplot(trials_to_criterion); ylabel('Trials to criterion');
 
 
+%% Fitiing procedure to find params for experimental learning curves
+stim_list = zeros(1,6);
+scales = repmat([60 75 85 100],1,4);
+tau_vec = reshape(ones(4,1)*[50 60 75 100],1,16);
+% scales = [1.05 1.06 1.07 1.09]
+% tau_vec = ones(1,4)*50
+clear all_lat*
 
+global monitor;
+monitor = 0;
 
+%optimal is filt_scale=1.055 tau=30 for pass-thru plant model
+%optimal is filt_scale=1.07 tau=50 for high-pass plant model
+
+% for grid_i = 1:numel(tau_vec)
+for grid_i = 1:numel(scales)
+        
+        disp(['Training condition ' num2str(grid_i) ' out of ' num2str(numel(scales) '... ']);
+        filt_scale = scales(grid_i);
+        tau_trans = tau_vec(grid_i);
+        clear run;
+
+        parfor g = 1:numel(stim_list)
+
+            net_init = gens.dets(index).net % diverse initial states
+            net_init.wIn(net.oUind,:) = [0 0];
+            stim = stim_list(g);
+
+            tau_trans = 30;
+            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+
+            run(g).output = output;
+            run(g).net = net_out;
+            run(g).pred_da_sense = pred_da_sense;
+            run(g).pred_da_move = pred_da_move;
+            disp(['Completed run: ' num2str(g)]);
+            
+        end
+
+        for gg=1:numel(run)
+                
+            latency = [];
+            latency_u = [];
+
+            for kk=1:numel(run(gg).output.pass)
+                if mod(kk,run(gg).net.update) == 0 || kk == 1
+                    latency = [latency run(gg).output.pass(kk).lat];
+                    latency_u = [latency_u run(gg).output.pass(kk).lat_u];                        
+                end
+            end
+
+            all_latency(gg,:) = latency;
+            all_latency_u(gg,:) = latency_u;
+            
+        end
+            
+
+        grid_run(grid_i).all_latency = all_latency;
+        grid_run(grid_i).all_latency_u = all_latency_u;
+        grid_run(grid_i).filt_scale = filt_scale;
+        grid_run(grid_i).tau_trans = tau_trans;
+        
+end
+
+figure(100); clf; clear to_fit;
+
+% To compare to data I need to take the mean of the first point and then
+% average over groups of 20 points (100 trials)
+for qq=1:numel(scales)
+
+    to_fit.cued(qq,1) = mean(grid_run(qq).all_latency(:,1));
+    to_fit.un(qq,1) = mean(grid_run(qq).all_latency_u(:,1));
+    
+    for q=1:8 % 800 trials total / 100 trial epochs
+        
+        inds = ((q-1)*20)+2:q*20+1;
+
+        to_fit.cued(qq,q+1) = mean( mean( grid_run(qq).all_latency(:,inds) ) );
+        to_fit.un(qq,q+1) = mean( mean( grid_run(qq).all_latency_u(:,inds) ) );
+
+    end
+    
+    subplot(sqrt(numel(scales)),sqrt(numel(scales)),qq);
+    plot(0:100:800,to_fit.cued(qq,:),'r'); hold on; plot(0:100:800,to_fit.un(qq,:),'k');
+    plot(100:100:800,mean(lats.cued),'ro'); hold on; plot(100:100:800,mean(lats.uncued,'omitnan'),'ko');
+    title(['Scales: ' num2str(grid_run(qq).filt_scale) ';  Tau: ' num2str(grid_run(qq).tau_trans)]);
+end
 
 %% Calculate predicted DA transients
 
