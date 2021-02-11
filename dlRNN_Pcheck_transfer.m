@@ -1,10 +1,10 @@
 function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale)
 
 option = 'state_simple';
-% trans_prob = 'non-linear';
-trans_prob = 'pass-thru';
+trans_prob = 'non-linear';
+% trans_prob = 'pass-thru';
 plotFlag = 0;
-reaction_time = 200;
+reaction_time = 150;
 
 % Original idea was just to scale this down
 plant_scale = filt_scale; 
@@ -12,12 +12,11 @@ plant_scale = filt_scale;
 % However a better version is really a high pass filter of activity
 filter1 = TNC_CreateGaussian(100,7,200,1);
 filter1(1:100) = 0;
-% filter2 = TNC_CreateGaussian(103,10,200,1)./1.055;
-filter2 = TNC_CreateGaussian(100,10,200,1)./filt_scale;
+filter2 = TNC_CreateGaussian(100,10,200,1)./1.07;
 filter2(1:100) = 0;
 filter = filter1-filter2;
-figure(200); plot(filter);
-figure(201); hold on; plot(conv([zeros(1,500) ones(1,1000)],filter,'same'));
+% figure(200); plot(filter);
+% figure(201); hold on; plot(conv([zeros(1,500) ones(1,1000)],filter,'same'));
 
 % transform normalized activity into rate parameter for lick plant
 switch trans_prob
@@ -26,7 +25,7 @@ switch trans_prob
         activity = activity ./ plant_scale;
         
     case 'non-linear'
-        kn = TNC_CreateGaussian(500,200,1000,1);
+        kn = TNC_CreateGaussian(500,150,1000,1);
         kn_c = cumsum(kn);
         re_act = activity.*1000;
         re_act(re_act<1) = 1;
@@ -34,7 +33,7 @@ switch trans_prob
         activity = kn_c((round(re_act))) ./ plant_scale;
         
     case 'high-pass'
-        kn = TNC_CreateGaussian(500,200,1000,1);
+        kn = TNC_CreateGaussian(500,150,1000,1);
         kn_c = cumsum(kn);
         re_act = activity.*1000;
         re_act(re_act<1) = 1;
@@ -79,9 +78,9 @@ switch option
         state           = zeros(1,numel(activity));
         checks_tmp      = zeros(1,numel(activity));
         norm_activity   = zeros(1,numel(activity));
-        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./125);
+        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./150);
         lick_template   = zeros(1,numel(activity));
-        lick_template(1:120:numel(activity)) = 1;
+        lick_template(1:150:numel(activity)) = 1;
         
         norm_activity     = activity + back_p;
         rand_chks          = rand(1,numel(activity));
@@ -114,7 +113,8 @@ switch option
             end
             for kk=1:numel(tmp)
                 if numel([tmp(kk):tmp_neg(kk)]) > 100 | tmp(kk)>numel(activity)-100
-                    offset = round(10*rand(1));
+%                     offset = round(10*rand(1));
+                    offset = randperm(150,1);
                     if tmp_neg(kk)+offset > numel(activity)
                         checks_tmp(tmp(kk)+offset:numel(activity)) = lick_template(1:numel([tmp(kk)+offset:numel(activity)]));
                     else
@@ -125,7 +125,7 @@ switch option
         end
         
         checks2 = find(checks_tmp==1) + reaction_time;
-        checks = checks2(find(checks2<size(activity,2)));
+        checks = checks2(find(checks2<size(activity,2))); % there is always a pause right at water delivery
 
         if plotFlag
             figure(700); clf;

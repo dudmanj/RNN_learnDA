@@ -1,10 +1,10 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 global monitor;
 
-%--------------- SIMULATION SCRIPT FOR MODEL IN Coddington & Dudman (2018)
+%--------------- SIMULATION SCRIPT FOR MODEL IN Coddington & Dudman (201
             t           = 1:800;
-            Mu          = 490;
+            Mu          = 440;
             Sigma       = 20;
             tmp_gauss   = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
             integral    = trapz(tmp_gauss);
@@ -14,7 +14,7 @@ global monitor;
 
             indep_resp_func = 1;
             t           = 1:800;
-            Mu          = 380;
+            Mu          = 440;
             Sigma       = 20;
             tmp_gauss   = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
             integral    = trapz(tmp_gauss);
@@ -24,7 +24,7 @@ global monitor;
 
             if indep_resp_func
                 t       = 1:800;
-                Mu      = 490;
+                Mu      = 440;
                 Sigma   = 60;
                 tmp_gauss = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
                 integral = trapz(tmp_gauss);
@@ -32,6 +32,7 @@ global monitor;
 
                 scale_factor = 3;
                 da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.9.*tmp_gauss;
+                da_imp_resp_f_oi = -0.9.*tmp_gauss;                
                 da_imp_resp_f_ei = da_imp_resp_f_ei * 1.25;
             else
                 da_imp_resp_f_ei = da_imp_resp_f_ee;
@@ -41,7 +42,9 @@ global monitor;
 pred_da_move = [];
 pred_da_sense = [];
 pred_da_move_u = [];
+pred_da_move_o = [];
 pred_da_sense_u = [];
+pred_da_sense_o = [];
 
 clear plot_stats;
 pass        = 1;
@@ -63,9 +66,10 @@ dt_div_tau  = dt/tau;
 % alpha_R     = 0.9;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
-eta_J       = 5e-5;             % {1e-5 1e-4} range seems most stable for learning
-% eta_J       = 5e-6;             % {1e-5 1e-4} range seems most stable for learning
-eta_wIn     = 1./tau_trans;
+eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
+% eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
+eta_wIn     = 1./30;     % best data match around 30-40 for tau_trans
+
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
 
@@ -151,7 +155,7 @@ for cond = 1:length(target_list)
             net_run.pass(pass).chk(curr_cond).o   = outputs;
             net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
             net_run.pass(pass).lat(curr_cond)                = median(lat_lck);
-            net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime+1) - outputs(rewTime);    
+            net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime) - outputs(rewTime-1);    
     
     figure(1); 
     plot(net_run.cond(curr_cond).out); hold on;
@@ -240,30 +244,42 @@ while pass <= 800 % stop when reward collection is very good
         % Using ~DA activity to compute updates (multiply through by derivative of policy during reward delivery component)
         eta_DA_mult = outputs(1610) - outputs(1599);
         
+        % current reward value normalized over {0,1} like derivative
+        curr_val = 1 - (1-exp(-deltaRew/500));
+        % pred_val_r = eta_DA_mult + stim_bonus; % predicted value at reward
+        pred_val_r = outputs(1599); % predicted value at reward
+        pred_val_c = outputs(110) - outputs(99); % predicted value at cue
+        
+        error_r = (curr_val-pred_val_r);
+        error_c = (error_r-pred_val_c);
+        
         % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
         switch stim
+
             case -1
-                
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;                    
                 else
-%                     stim_bonus = -0.25;  % this does actually work but hard to make sense of 
                     stim_bonus = 5;  % this does actually work                  
                 end
                 
             case 0
-                
-                % do nothing
-                    stim_bonus = 1;                    
+                stim_bonus = 1;                    
                 
             case 1
-                
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 5;                    
                 else
                     stim_bonus = 1;                    
                 end
                 
+            case 20
+                error_r=1;
+                stim_bonus = 2;
+                
+            otherwise
+                stim_bonus = stim;
+                    
         end
 
         % Miconi-like formalism
@@ -279,20 +295,15 @@ while pass <= 800 % stop when reward collection is very good
         net_out.J = net_out.J + delta_J;
 
 %------------ Calculate the proposed weight changes at inputs
-        curr_val = 1 - (1-exp(-deltaRew/500)); % current reward value normalized over {0,1} like derivative
-%         pred_val_r = eta_DA_mult + stim_bonus; % predicted value at reward
-        pred_val_r = outputs(1599); % predicted value at reward
         
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*(curr_val-pred_val_r)*stim_bonus;
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus;
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
         elseif net_out.wIn(net.oUind,2)<0
             net_out.wIn(net.oUind,2)=0;
         end
         
-        pred_val_c = outputs(110) - outputs(99); % predicted value at cue
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*(curr_val-pred_val_r-pred_val_c)*stim_bonus;
-        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus;        
         if net_out.wIn(net.oUind,1)>10
             net_out.wIn(net.oUind,1)=10;
         elseif net_out.wIn(net.oUind,1)<0
@@ -301,7 +312,8 @@ while pass <= 800 % stop when reward collection is very good
         
 %------------------ Calculate the proposed weight changes at inputs
 
-        figure(300); subplot(121); imagesc(net_out.wIn(net.oUind,:),[0 10]); subplot(122); imagesc([pred_val_c pred_val_r curr_val],[-1 1]);                
+    
+%         figure(300); subplot(121); imagesc(net_out.wIn(net.oUind,:),[0 10]); subplot(122); imagesc([pred_val_c pred_val_r curr_val],[-1 1]);                
 
         a_delta_J(curr_cond) = median(abs(delta_J(:))); % Save magnitude of change    
         a_sum_err(curr_cond) = err; % Save magnitude of error for this condition   
@@ -410,15 +422,23 @@ while pass <= 800 % stop when reward collection is very good
             net_run.cond(curr_cond).hx                = hidden_x;
             net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
             net_run.pass(pass).chk(curr_cond).o   = outputs;
+            
             net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
                 net_run.pass(pass).anticip_o(curr_cond) = mean(anticip_lck_o);
                 net_run.pass(pass).anticip_u(curr_cond) = mean(anticip_lck_u);
-            net_run.pass(pass).lat(curr_cond)                = median(lat_lck);
-                net_run.pass(pass).lat_o(curr_cond)                = median(lat_lck_o);
-                net_run.pass(pass).lat_u(curr_cond)                = median(lat_lck_u);
-            net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime+1) - outputs(rewTime);
-                net_run.pass(pass).sens_gain_o(curr_cond) = outputs_omit(rewTime+1) - outputs_omit(rewTime);
-                net_run.pass(pass).sens_gain_u(curr_cond) = outputs_uncued(rewTime+1) - outputs_uncued(rewTime);
+
+            net_run.pass(pass).lat(curr_cond)                = mean(lat_lck);
+                net_run.pass(pass).lat_o(curr_cond)                = mean(lat_lck_o);
+                net_run.pass(pass).lat_u(curr_cond)                = mean(lat_lck_u);
+                
+            net_run.pass(pass).sens_gain(curr_cond) = outputs(1610) - outputs(1599);
+                net_run.pass(pass).sens_gain_o(curr_cond) = outputs_omit(1610) - outputs_omit(1599);
+                net_run.pass(pass).sens_gain_u(curr_cond) = outputs_uncued(1610) - outputs_uncued(1599);
+
+            net_run.pass(pass).trans_r(curr_cond)   = net_out.wIn(net.oUind,2);
+                net_run.pass(pass).trans_c(curr_cond)   = net_out.wIn(net.oUind,1);
+                
+            net_run.pass(pass).sust(curr_cond)      = trapz(outputs(600:1600)) / 1000;
             
         end
         
@@ -434,7 +454,7 @@ while pass <= 800 % stop when reward collection is very good
 
         % visualize training error
         if monitor
-            [err_map] = TNC_CreateRBColormap(10,'cpb'); 
+            [err_map] = TNC_CreateRBColormap(10,'cpb');
             figure(102); clf; 
             subplot(121);
             imagesc(0:0.1:9,60:1:1500,tmptmp); colormap(err_map); hold on;
@@ -466,6 +486,11 @@ while pass <= 800 % stop when reward collection is very good
         pred_da_stime_u(1:75) = 0;
         pred_da_stime_u(125:1575) = 0;
         pred_da_stime_u(1625:3000) = 0;
+        pred_da_stime_o = sensory_resp_o;
+        pred_da_stime_o(sensory_resp_o<0) = 0;
+        pred_da_stime_o(1:75) = 0;
+        pred_da_stime_o(125:1575) = 0;
+        pred_da_stime_o(1625:3000) = 0;  
         
         % Find state transitions in behavior
         pred_da_time = zeros(1,size(hidden_r,2));
@@ -507,6 +532,28 @@ while pass <= 800 % stop when reward collection is very good
         pred_da_move_u = [ pred_da_move_u ; conv(pred_da_time_u,da_imp_resp_f_ei,'same') ];
         pred_da_sense_u = [ pred_da_sense_u ; conv(pred_da_stime_u,da_imp_resp_f_se,'same') ];
 
+        
+        % Find state transitions in behavior
+        pred_da_time_o = zeros(1,size(hidden_r_omit,2));
+        for qq=1:error_reps
+            [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale);
+            all_inits_o = find([0 diff(state_o)]==1);
+            cons_inits_o = find(all_inits_o>rewTime,1);
+            if numel(cons_inits_o)>0
+                init_consume_o(qq) = all_inits_o(cons_inits_o);
+            else
+                init_consume_o(qq) = 0;
+            end
+        end
+        
+        if numel(find(init_consume_o>0))>0
+            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = (numel(find(init_consume_o>0)) / error_reps) / error_reps; % scale by probability of reactive init
+        end
+
+        pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same') ];
+        pred_da_sense_o = [ pred_da_sense_o ; conv(pred_da_stime_o,da_imp_resp_f_se,'same') ];
+        
+        
 %-------- ESTIMATE DA response using the Coddington & Dudman 2018 formalism
         
         if monitor==1
@@ -520,7 +567,7 @@ while pass <= 800 % stop when reward collection is very good
             subplot(224);
             imagesc(pred_da_sense_u);
         else            
-            if mod(pass,200) == 0 & monitor==1
+            if mod(pass,100) == 0 & monitor==1
                 disp(['Error: ' num2str(test_error) ' --- Median delta_J: ' num2str(median(a_delta_J)) ' --- %Clipped: ' num2str(median(percentClipped))])
             end
         end
@@ -533,4 +580,6 @@ while pass <= 800 % stop when reward collection is very good
          
 end
 
-disp(['Number of passes through training data: ' num2str(pass-1)]);
+% disp(['Number of passes through training data: ' num2str(pass-1)]);
+disp(['Final latency error: ' num2str(test_error)]);
+    

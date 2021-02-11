@@ -46,7 +46,7 @@ for cond = 1:length(target_list)
     for qq=1:error_reps
         
         % pass output through the transfer function
-        outputs_t = transfer_func_handle(outputs./plant_scale);
+        outputs_t = transfer_func_handle(outputs./plant_scale,50);
 
         % Calculate performance error as a function something like:
         rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );

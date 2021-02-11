@@ -258,7 +258,7 @@ actLogic = 0;
 N   = 50;              % RNN Units
 B   = size(target{1},1);% Outputs
 I   = size(input{1},1); % Inputs
-p   = 0.5;                % Sparsity
+p   = 0.9;                % Sparsity
 % p   = 0.2;                % Sparsity
 % g   = 1;            % Spectral scaling
 % g   = 3;              % Sub-spectral scaling
@@ -546,7 +546,7 @@ for index=indices
 end
 title('Optimal evolved '); box off; ylabel('Output unit'); axis([0 numel(gens.dets(1).out) -1 1]);
 
-index=ii(98)
+index=ii(212)
 % index=ii(round(generations/2))
 gens.dets(index).net.g
 
@@ -748,41 +748,50 @@ figure(500); boxplot(trials_to_criterion); ylabel('Trials to criterion');
 
 
 %% Fitiing procedure to find params for experimental learning curves
-stim_list = zeros(1,6);
-scales = repmat([60 75 85 100],1,4);
-tau_vec = reshape(ones(4,1)*[50 60 75 100],1,16);
+stim_list = zeros(1,12);
+scales = repmat([30 40 ],1,2);
+tau_vec = reshape(ones(2,1)*[20 30],1,4);
+% scales = 30;
+% tau_vec = 30;
 % scales = [1.05 1.06 1.07 1.09]
 % tau_vec = ones(1,4)*50
-clear all_lat*
+
+clear all_lat* grid_run
 
 global monitor;
 monitor = 0;
+disp('_ New run');
 
-%optimal is filt_scale=1.055 tau=30 for pass-thru plant model
+% indices=[ii(212) ii(213) ii(205) ii(196) ii(176) ii(70)];
+
+index=ii(89);
+
+% optimal is rough;y plant_scale=60 tau=100 for pass-thru plant model
 %optimal is filt_scale=1.07 tau=50 for high-pass plant model
 
 % for grid_i = 1:numel(tau_vec)
 for grid_i = 1:numel(scales)
         
-        disp(['Training condition ' num2str(grid_i) ' out of ' num2str(numel(scales) '... ']);
+        disp('_ ');
+        disp(['Training grid ' num2str(grid_i) ' out of ' num2str(numel(scales)) '... ']);
         filt_scale = scales(grid_i);
         tau_trans = tau_vec(grid_i);
         clear run;
 
         parfor g = 1:numel(stim_list)
 
+%             index = indices(g);
             net_init = gens.dets(index).net % diverse initial states
             net_init.wIn(net.oUind,:) = [0 0];
             stim = stim_list(g);
 
-            tau_trans = 30;
             [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
 
             run(g).output = output;
             run(g).net = net_out;
             run(g).pred_da_sense = pred_da_sense;
             run(g).pred_da_move = pred_da_move;
-            disp(['Completed run: ' num2str(g)]);
+            disp(['Completed run: ' num2str(g) ' from grid ' num2str(grid_i)]);
             
         end
 
@@ -827,13 +836,272 @@ for qq=1:numel(scales)
         to_fit.cued(qq,q+1) = mean( mean( grid_run(qq).all_latency(:,inds) ) );
         to_fit.un(qq,q+1) = mean( mean( grid_run(qq).all_latency_u(:,inds) ) );
 
+%         to_fit.cued_e(qq,q+1) = std( mean( grid_run(qq).all_latency(:,inds) ) ) ./ sqrt(numel(stim_list));
+%         to_fit.un_e(qq,q+1) = std( mean( grid_run(qq).all_latency_u(:,inds) ) ) ./ sqrt(numel(stim_list));
+        to_fit.cued_e(qq,q+1) = std( mean( grid_run(qq).all_latency(:,inds) ) );
+        to_fit.un_e(qq,q+1) = std( mean( grid_run(qq).all_latency_u(:,inds) ) );
+        
     end
     
     subplot(sqrt(numel(scales)),sqrt(numel(scales)),qq);
-    plot(0:100:800,to_fit.cued(qq,:),'r'); hold on; plot(0:100:800,to_fit.un(qq,:),'k');
-    plot(100:100:800,mean(lats.cued),'ro'); hold on; plot(100:100:800,mean(lats.uncued,'omitnan'),'ko');
+%     plot(0:100:800,to_fit.cued(qq,:),'r'); hold on; plot(0:100:800,to_fit.un(qq,:),'k');
+    shadedErrorBar(0:100:800,to_fit.cued(qq,:),to_fit.cued_e(qq,:),{'color',[1 0 0]}); hold on; 
+    shadedErrorBar(0:100:800,to_fit.un(qq,:),to_fit.un_e(qq,:));
+    box off;
+%     plot([100:100:800]-0,mean(lats.cued),'r-o','MarkerFace','r'); hold on; plot([100:100:800]-0,mean(lats.uncued,'omitnan'),'k-o','MarkerFace','k');
     title(['Scales: ' num2str(grid_run(qq).filt_scale) ';  Tau: ' num2str(grid_run(qq).tau_trans)]);
 end
+
+% Run used in figure saved as: Coddington-ModelFigure-CuedUncuedInitData
+
+%% Examine how the balance of transient learning (eta_wIn) and sustained learning (eta_J) multipliers influence the course of learning
+
+% If stim != [-1,0,1] then it is just a multiplier applied on every trial
+stim_list = repmat([0.2 0.5 0 2 5],1,6);
+
+% Converting tau_trans into a multiplier for eta_J that can be passed into dlRNN_train_learn
+tau_vec = [0.2 0.5 1 2 5]
+
+% Fix the plant scales, not really relevant to this examination
+scales = 50*ones(1,numel(tau_vec));
+
+clear all_* grid_run
+
+global monitor;
+monitor = 0;
+disp('_ New run');
+
+% index=ii(89);
+index = ii(213);
+
+% for grid_i = 1:numel(tau_vec)
+for grid_i = 1:numel(scales)
+        
+        disp('_ ');
+        disp(['Training grid ' num2str(grid_i) ' out of ' num2str(numel(scales)) '... ']);
+        filt_scale = scales(grid_i);
+        tau_trans = tau_vec(grid_i);
+        clear run;
+
+        parfor g = 1:numel(stim_list)
+
+% % Uncomment this if one wants to examine a replica of several runs. Used
+% for DA correlate predictions in Figure 4.
+% for ggg=1:10
+%         monitor =0;
+            net_init = gens.dets(index).net;
+            net_init.wIn(net.oUind,:) = [0 0];
+            stim = stim_list(g);
+
+            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+            
+%     da_store(ggg).pred_da_move = pred_da_move;
+%     da_store(ggg).pred_da_move_u = pred_da_move_u;
+%     da_store(ggg).pred_da_sense = pred_da_sense;
+%     da_store(ggg).pred_da_sense_u = pred_da_sense_u;
+%     da_store(ggg).pred_da_move_o = pred_da_move_o;
+%     da_store(ggg).pred_da_sense_o = pred_da_sense_o;
+%     
+%     ggg
+% end
+
+            run(g).output = output;
+            run(g).net = net_out;
+            run(g).stim = stim;
+            run(g).pred_da_sense = pred_da_sense;
+            run(g).pred_da_move = pred_da_move;
+            disp(['Completed run: ' num2str(g) ' from grid ' num2str(grid_i)]);
+            
+        end
+
+        for gg=1:numel(run)
+                
+            latency = []; trans_r=[]; trans_c=[]; sust=[];            
+
+            for kk=1:numel(run(gg).output.pass)
+                if mod(kk,run(gg).net.update) == 0 || kk == 1
+                    latency = [latency run(gg).output.pass(kk).lat];
+                    trans_r = [trans_r run(gg).output.pass(kk).trans_r ];
+                    trans_c = [trans_c run(gg).output.pass(kk).trans_c ];
+                    sust    = [sust run(gg).output.pass(kk).sust ];
+                end
+            end
+
+            all_latency(gg,:) = latency;
+            all_trans_r(gg,:) = trans_r;
+            all_trans_c(gg,:) = trans_c;
+            all_sust(gg,:) = sust;
+            
+        end
+            
+
+        grid_run(grid_i).all_latency = all_latency;
+        grid_run(grid_i).trans_r = all_trans_r;
+        grid_run(grid_i).trans_c = all_trans_c;
+        grid_run(grid_i).sust = all_sust;
+
+        grid_run(grid_i).filt_scale = filt_scale;
+        grid_run(grid_i).tau_trans = tau_trans;
+        
+        grid_run
+        
+end
+
+save ~/'Dropbox (HHMI)'/'Conditioned responding and DA'/Figures/Fig4_Model/Coddington-ModelFigure-LearningRateCompare-488-wIn-30-eJ-2p5e5 grid_run;
+
+%% check a single run
+
+latency = []; trans_r=[]; trans_c=[]; sust=[];            
+
+            for kk=1:numel(output.pass)
+                if mod(kk,net_out.update) == 0 || kk == 1
+                    latency = [latency output.pass(kk).lat ];
+                    trans_r = [trans_r output.pass(kk).trans_r ];
+                    trans_c = [trans_c output.pass(kk).trans_c ];
+                    sust    = [sust    output.pass(kk).sust ];
+                end
+            end
+            
+            figure(5); hold on; plot3(sgolayfilt(sust,3,11),-sgolayfilt(trans_c,3,11),1-exp(-sgolayfilt(latency,3,11)/500)); grid on; box on;
+            
+%% Use a single simulation run to estimate DA transients
+% Specific to the way that some iterations of simulations were run
+
+clear da_pred;
+
+% as per fig 2
+early = 2:20;
+mid = 70:90;
+late = 140:160;
+
+s_scl = 2;
+
+jrcamp_tau = 500;
+t=1:3000;
+kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
+kern=kern/trapz(kern);
+for ggg=1:10
+    da_pred.early.c(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense(early,:)) + mean(da_store(ggg).pred_da_move(early,:)) , kern , 'same');
+    da_pred.early.u(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense_u(early,:)) + mean(da_store(ggg).pred_da_move_u(early,:)) , kern , 'same');
+
+    da_pred.mid.c(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense(mid,:)) + mean(da_store(ggg).pred_da_move(mid,:)) , kern , 'same');
+    da_pred.mid.u(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense_u(mid,:)) + mean(da_store(ggg).pred_da_move_u(mid,:)) , kern , 'same');
+    da_pred.mid.o(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense_o(mid,:)) + mean(da_store(ggg).pred_da_move_o(mid,:)) , kern , 'same');
+
+    da_pred.late.c(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense(late,:)) + mean(da_store(ggg).pred_da_move(late,:)) , kern , 'same');
+    da_pred.late.u(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense_u(late,:)) + mean(da_store(ggg).pred_da_move_u(late,:)) , kern , 'same');
+    da_pred.late.o(ggg,:) = conv( s_scl*mean(da_store(ggg).pred_da_sense_o(late,:)) + mean(da_store(ggg).pred_da_move_o(late,:)) , kern , 'same');
+end
+
+% figure(500); clf;
+% subplot(1,3,1); plot(da_pred.early.c,'r','linewidth',2); hold on; plot(da_pred.early.u,'k','linewidth',2); axis([0 3e3 -0.001 0.01]); box off;
+% subplot(1,3,2); plot(da_pred.mid.c,'r','linewidth',2); hold on; plot(da_pred.mid.u,'k','linewidth',2); axis([0 3e3 -0.001 0.01]);  box off;
+% subplot(1,3,3); plot(da_pred.late.c,'r','linewidth',2); hold on; plot(da_pred.late.u,'k','linewidth',2); plot(da_pred.late.o,'b','linewidth',2); axis([0 3e3 -0.001 0.01]);  box off;
+
+figure(500); clf;
+subplot(1,3,1); shadedErrorBar(-1600:1399,mean(da_pred.early.u),std(da_pred.early.u),{'color','k'}); hold on; shadedErrorBar(-1600:1399,mean(da_pred.early.c),std(da_pred.early.c),{'color','r'}); axis([-1600 1.4e3 -0.001 0.0075]); box off;
+subplot(1,3,2); shadedErrorBar(-1600:1399,mean(da_pred.mid.u),std(da_pred.mid.u),{'color','k'}); hold on; shadedErrorBar(-1600:1399,mean(da_pred.mid.o),std(da_pred.mid.o),{'color','b'}); shadedErrorBar(-1600:1399,mean(da_pred.mid.c),std(da_pred.mid.c),{'color','r'}); axis([-1600 1.4e3 -0.001 0.0075]);  box off;
+subplot(1,3,3); shadedErrorBar(-1600:1399,mean(da_pred.late.u),std(da_pred.late.u),{'color','k'});  hold on; shadedErrorBar(-1600:1399,mean(da_pred.late.o),std(da_pred.late.o),{'color','b'}); shadedErrorBar(-1600:1399,mean(da_pred.late.c),std(da_pred.late.c),{'color','r'});axis([-1600 1.4e3 -0.001 0.0075]);  box off;
+xlabel('Time from reward (ms)');
+
+save ~/'Dropbox (HHMI)'/'Conditioned responding and DA'/Figures/Fig4_Model/Figure-DataForDAPrediction da_pred da_store
+
+%% Plot the scan over learning rates simulations
+figure(101); clf; clear to_fit; figure(102); clf; figure(103); clf;
+clear lrn_traj
+
+order = 3;
+width = 11;
+win_ln = 24;
+bin_log='fit';
+trial_krn = [0 ones(1,win_ln)/win_ln 0];
+
+% % DIMENSIONS
+% 1: tau_vec conditions
+% 2: trials
+% 3: stim_list conditions
+
+% To compare to data I need to take the mean of the first point and then
+% average over groups of 20 points (100 trials)
+for qq=1:numel(scales)
+    
+    for q=1:5 % stim_list items
+        
+        inds = [0:5:25]+q; % demix the repeating structure of stim_vec
+
+        switch bin_log
+            case 'bin'
+                [tb] = TNC_BinAndMean(1:160,mean( grid_run(qq).all_latency(inds,2:end) ),win_ln);        
+                lrn_traj.lat(qq,:,q) = tb.bins.avg;
+                lrn_traj.cost(qq,:,q) = 1-exp(-tb.bins.avg/500);
+
+                [tb] = TNC_BinAndMean(1:160,mean( grid_run(qq).trans_r(inds,2:end) ),win_ln);        
+                lrn_traj.trans_r(qq,:,q) = tb.bins.avg; 
+
+
+                [tb] = TNC_BinAndMean(1:160,mean( grid_run(qq).trans_c(inds,2:end) ),win_ln);        
+                lrn_traj.trans_c(qq,:,q) = tb.bins.avg;
+
+                [tb] = TNC_BinAndMean(1:160,mean( grid_run(qq).sust(inds,2:end) ),win_ln);        
+                lrn_traj.sust(qq,:,q) = tb.bins.avg;
+                
+            case 'smooth'            
+                lrn_traj.lat(qq,:,q) = sgolayfilt( mean( grid_run(qq).all_latency(inds,2:end) ) , order, width);
+                lrn_traj.cost(qq,:,q) = 1-exp(-lrn_traj.lat(qq,:,q)/500);
+
+                lrn_traj.trans_r(qq,:,q) = sgolayfilt( mean( grid_run(qq).trans_r(inds,2:end) ) , order, width);            
+                lrn_traj.trans_c(qq,:,q) = sgolayfilt( mean( grid_run(qq).trans_c(inds,2:end) ) , order, width);
+                lrn_traj.sust(qq,:,q) = sgolayfilt( mean( grid_run(qq).sust(inds,2:end) ) , order, width);    
+                
+            case 'fit'
+                x = 1:numel(data);
+                data = mean( grid_run(qq).all_latency(inds,2:end) );
+                latency_model = fit(x',data'-100,'exp1','Lower',[1 -0.1],'Upper',[Inf 0]);
+                lrn_traj.lat(qq,:,q) = latency_model(x);
+                lrn_traj.cost(qq,:,q) = 1-exp(-lrn_traj.lat(qq,:,q)/500);
+                
+                data = mean( grid_run(qq).trans_r(inds,2:end) );
+                trans_r_model = fit(x',(data'-10)/10,'exp1','Lower',[1 -0.1],'Upper',[Inf 0]);
+                lrn_traj.trans_r(qq,:,q)  = (data'-10)/10 ; %trans_r_model(x);
+
+                data = mean( grid_run(qq).sust(inds,2:end) );
+                sust_model = fit(x',data'-1,'exp1','Lower',[-Inf -0.1],'Upper',[-1 0]);
+                lrn_traj.sust(qq,:,q) = sust_model(x);          
+
+                lrn_traj.trans_c(qq,:,q) = sgolayfilt( mean( grid_run(qq).trans_c(inds,2:end) ) , order, width);
+
+        end
+
+        if qq==5 & q==5 | qq==5 & q==1 | q==5 & qq==1 | q==1 & qq==1
+            figure(101); plot3( lrn_traj.sust(qq,:,q) , -lrn_traj.trans_r(qq,:,q)/10 , lrn_traj.cost(qq,:,q) , 'linewidth' , 4 , 'color' , [0.2*q , 0.33 , 0.2*qq 1]); hold on; box on;grid on;
+        elseif qq==3 & q==3
+            figure(101); plot3( lrn_traj.sust(qq,:,q) , -lrn_traj.trans_r(qq,:,q)/10 , lrn_traj.cost(qq,:,q) , 'linewidth' , 4 , 'color' , [0 0 0]); hold on; box on;grid on;
+        else
+            figure(101); plot3( lrn_traj.sust(qq,:,q) , -lrn_traj.trans_r(qq,:,q)/10 , lrn_traj.cost(qq,:,q) , 'linewidth' , 1 , 'color' , [0.2*q , 0.33 , 0.2*qq 0.75]); hold on; box on;grid on;
+        end
+        xlabel('Sustained'); ylabel('Transient'); zlabel('Cost'); view(48,30);
+            
+        if qq==3 & q==3
+            figure(102); loglog(tau_vec(q),tau_vec(qq),'.','MarkerSize',90,'color' , [0 0 0]); hold on; xlabel('Trans. rate factor'); ylabel('Sust. rate factor'); axis([0.1 10 0.1 10]); box off;            
+        else
+            figure(102); loglog(tau_vec(q),tau_vec(qq),'.','MarkerSize',90,'color' , [0.2*q , 0.33 , 0.2*qq 1]); hold on; xlabel('Trans. rate factor'); ylabel('Sust. rate factor'); axis([0.1 10 0.1 10]); box off;
+        end
+        
+        figure(103); 
+        if qq==3 & q==3
+            subplot(311); plot( lrn_traj.sust(qq,:,q) , 'linewidth' , 4 , 'color' , [0 0 0]); hold on; box off; ylabel('Sustained');
+            subplot(312); plot( -lrn_traj.trans_r(qq,:,q) , 'linewidth' , 4 , 'color' , [0 0 0]); hold on; box off; ylabel('-Transient');
+            subplot(313); plot( lrn_traj.lat(qq,:,q) , 'linewidth' , 4 , 'color' , [0 0 0]); hold on; box off; ylabel('Latency');
+        else
+            subplot(311); plot( lrn_traj.sust(qq,:,q) , 'linewidth' , 2 , 'color' , [0.2*q , 0.33 , 0.2*qq 0.75]); hold on; box off; ylabel('Sustained');
+            subplot(312); plot( -lrn_traj.trans_r(qq,:,q) , 'linewidth' , 2 , 'color' , [0.2*q , 0.33 , 0.2*qq 0.75]); hold on; box off; ylabel('-Transient');
+            subplot(313); plot( lrn_traj.lat(qq,:,q) , 'linewidth' , 2 , 'color' , [0.2*q , 0.33 , 0.2*qq 0.75]); hold on; box off; ylabel('Latency');
+        end
+    end
+    
+end
+
+
 
 %% Calculate predicted DA transients
 
