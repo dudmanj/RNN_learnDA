@@ -77,7 +77,7 @@ for p=pol_vec
     
     raster.x = []; raster.y = []; peth = zeros(1,3000);
     for pp=1:reps
-        [checks,state] = dlRNN_Pcheck_transfer(activity);
+        [checks,state] = dlRNN_Pcheck_transfer(activity,50);
         if numel(checks)>0
             raster.y = [raster.y ones(1,numel(checks))*pp];
             raster.x = [raster.x checks];
@@ -97,6 +97,95 @@ for p=pol_vec
         axis([0 2.5e3 0 1]);
     
 end
+
+%% Calculate cost surface using the plant model
+s_map = TNC_CreateRBColormap(1000,'cpb');
+clear lat_mat x_vals y_vals cost_mat
+% calc latencies from range of transient and sustained settings
+filter1 = TNC_CreateGaussian(5000,400,10000,1);
+filter1(1:5000) = 0;
+
+t = 1:2450;
+filter1 = [zeros(1,2450) [0:0.1:1] exp(-t/1000)];
+
+sust_vec = [0:0.05:1]./3;
+% trans_vec = [-5:1:5]/5;
+trans_vec = [-0.1 0 10.^[-1:0.1:1]];
+figure(1); clf;
+        raster.y = [];
+        raster.x = [];
+cnt = 1;
+reps=1:1000;
+
+for curr_sust=sust_vec
+    for curr_trans=trans_vec
+        
+        s = find(sust_vec==curr_sust);
+        t = find(trans_vec==curr_trans);
+        curr_polS = zeros(1,3000);
+        curr_polS = [zeros(1,600) ones(1,950).*curr_sust zeros(1,1450)];
+        curr_polT = zeros(1,3000);
+        curr_polT(1599:1620) = curr_trans;
+
+        activity = curr_polS + conv(curr_polT,filter1,'same');
+        activity = curr_polS + curr_polT;
+        
+%         figure(1); plot(activity); hold on;
+
+        lat = zeros(1,numel(reps));
+        for i=reps
+            [checks,state] = dlRNN_Pcheck_transfer(activity,50);
+%             raster.y = [raster.y ones(1,numel(checks))*cnt];
+%             raster.x = [raster.x checks];
+            tmp = checks(checks>1600);
+            if numel(tmp>0)
+                lat(i) = tmp(1)-1600;
+            else
+                lat(i) = 1400;
+            end
+            cnt = cnt+1;
+        end
+        
+        lat_mat(s,t) = mean(lat);
+        x_vals(s,t) = curr_sust;
+        y_vals(s,t) = mean(lat);
+        cost_mat(s,t) = (1-exp(-lat_mat(s,t)/500));
+
+
+    end
+end
+
+%         figure(2); plot(raster.x,raster.y,'.');
+
+%
+figure(100);
+
+set(0,'DefaultFigureRenderer','painters');
+
+% option 1 is actual surface
+s = surf(sust_vec./std(sust_vec),lat_mat(1,:)*(275./1400),cost_mat');
+% s = surf(sust_vec./std(sust_vec),trans_vec./std(trans_vec),cost_mat');
+
+% option 2 is equivalent fit surface
+% x = reshape(x_vals,numel(cost_mat),1);
+% y = reshape(y_vals,numel(cost_mat),1);
+% z = reshape(cost_mat,numel(cost_mat),1);
+% plant_surf_model = fit([x y],z,'poly33');
+% s = plot(plant_surf_model);
+
+s.EdgeColor = [0.35 0.35 0.35];
+s.FaceAlpha = 0.85;
+s.FaceLighting = 'gouraud';
+colormap(s_map);
+xlabel('Sustained');
+ylabel('Transient');
+zlabel('Cost');
+% axis([min(trans_vec) max(trans_vec) min(sust_vec) max(sust_vec) 0 max(max(cost_mat))]);
+axis([0 3 0 275 0 1.2]);
+view(48,30);
+% set(gca,'YDir','reverse');
+set(gca,'Color',[0.95 0.95 0.95]);
+box on; 
 
 %% construct the inputs & define training target 
 

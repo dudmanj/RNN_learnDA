@@ -2,7 +2,7 @@ function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale)
 
 option = 'state_simple';
 % trans_prob = 'non-linear';
-trans_prob = 'pass-thru';
+% trans_prob = 'pass-thru';
 plotFlag = 0;
 reaction_time = 150;
 
