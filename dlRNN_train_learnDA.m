@@ -260,7 +260,7 @@ while pass <= 800 % stop when reward collection is very good
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;                    
                 else
-                    stim_bonus = 5;  % this does actually work                  
+                    stim_bonus = 2;  % this does actually work                  
                 end
                 
             case 0
@@ -268,7 +268,7 @@ while pass <= 800 % stop when reward collection is very good
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 5;                    
+                    stim_bonus = 2;                    
                 else
                     stim_bonus = 1;                    
                 end
@@ -382,9 +382,9 @@ while pass <= 800 % stop when reward collection is very good
                 err_vector(qq) = err;
                 err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var);
                 err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
-                anticip_lck(qq) = numel(find(outputs_t<rewTime));
-                    anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime));
-                    anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime));
+                anticip_lck(qq) = numel(find(outputs_t<rewTime & outputs_t>600));
+                    anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime & outputs_t_o>600));
+                    anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime & outputs_t_u>600));
                 lat_lck(qq) = deltaRew;
                     lat_lck_o(qq) = deltaRew_o;
                     lat_lck_u(qq) = deltaRew_u;
@@ -421,6 +421,7 @@ while pass <= 800 % stop when reward collection is very good
             net_run.cond(curr_cond).hr          = hidden_r;
             net_run.cond(curr_cond).hx                = hidden_x;
             net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
+            net_run.pass(pass).chk(curr_cond).v   = outputs_t;
             net_run.pass(pass).chk(curr_cond).o   = outputs;
             
             net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
@@ -473,24 +474,37 @@ while pass <= 800 % stop when reward collection is very good
         
 %-------- ESTIMATE DA response using the Coddington & Dudman 2018 formalism 
 
-        sensory_resp = act_func_handle( [0 diff(outputs)] );
-        sensory_resp_o = act_func_handle( [0 diff(outputs_omit)] );
-        sensory_resp_u = act_func_handle( [0 diff(outputs_uncued)] );
+%         sensory_resp = act_func_handle( [0 diff(outputs)] );
+%         sensory_resp_o = act_func_handle( [0 diff(outputs_omit)] );
+%         sensory_resp_u = act_func_handle( [0 diff(outputs_uncued)] );
+        
+        % proper daMult version
+        sensory_resp = zeros(1,3000);
+            sensory_resp(1640) = outputs(1610) - outputs(1599);
+            sensory_resp(160) = outputs(110) - outputs(99);
+        sensory_resp_o = zeros(1,3000);
+            sensory_resp_o(1640) = outputs_omit(1610) - outputs_omit(1599);
+            sensory_resp_o(160) = outputs_omit(110) - outputs_omit(99);
+        sensory_resp_u = zeros(1,3000);
+            sensory_resp_u(1640) = outputs_uncued(1610) - outputs_uncued(1599);
+            sensory_resp_u(160) = outputs_uncued(110) - outputs_uncued(99);
+        
+        
         pred_da_stime = sensory_resp;
-        pred_da_stime(sensory_resp<0) = 0;
-        pred_da_stime(1:75) = 0;
-        pred_da_stime(125:1575) = 0;
-        pred_da_stime(1625:3000) = 0;
+%         pred_da_stime(sensory_resp<0) = 0;
+%         pred_da_stime(1:75) = 0;
+%         pred_da_stime(125:1575) = 0;
+%         pred_da_stime(1625:3000) = 0;
         pred_da_stime_u = sensory_resp_u;
-        pred_da_stime_u(sensory_resp_u<0) = 0;
-        pred_da_stime_u(1:75) = 0;
-        pred_da_stime_u(125:1575) = 0;
-        pred_da_stime_u(1625:3000) = 0;
+%         pred_da_stime_u(sensory_resp_u<0) = 0;
+%         pred_da_stime_u(1:75) = 0;
+%         pred_da_stime_u(125:1575) = 0;
+%         pred_da_stime_u(1625:3000) = 0;
         pred_da_stime_o = sensory_resp_o;
-        pred_da_stime_o(sensory_resp_o<0) = 0;
-        pred_da_stime_o(1:75) = 0;
-        pred_da_stime_o(125:1575) = 0;
-        pred_da_stime_o(1625:3000) = 0;  
+%         pred_da_stime_o(sensory_resp_o<0) = 0;
+%         pred_da_stime_o(1:75) = 0;
+%         pred_da_stime_o(125:1575) = 0;
+%         pred_da_stime_o(1625:3000) = 0;  
         
         % Find state transitions in behavior
         pred_da_time = zeros(1,size(hidden_r,2));
@@ -498,6 +512,17 @@ while pass <= 800 % stop when reward collection is very good
             [outputs_t,state] = transfer_func_handle(outputs./plant_scale,filt_scale);
             all_inits = find([0 diff(state)]==1);
             cons_inits = find(all_inits>rewTime,1);
+            if cons_inits>1
+                if all_inits(cons_inits)>rewTime & all_inits(cons_inits)-all_inits(cons_inits-1)>600
+                    cons_inits = cons_inits;
+                else
+                    cons_inits = [];                    
+                end
+            elseif all_inits(cons_inits)>rewTime
+                cons_inits = cons_inits;               
+            else
+                cons_inits = [];
+            end
             if numel(cons_inits)>0
                 init_consume(qq) = all_inits(cons_inits);
             else

@@ -79,7 +79,8 @@ switch option
         checks_tmp      = zeros(1,numel(activity));
         norm_activity   = zeros(1,numel(activity));
 %         back_p          = exp(([1:numel(activity)]-numel(activity)-3)./150);
-        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./25);
+        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./200);
+%         back_p          = exp(([1:numel(activity)]-numel(activity)-3)./25);
         lick_template   = zeros(1,numel(activity));
         lick_template(1:150:numel(activity)) = 1;
         
