@@ -587,8 +587,9 @@ title('Optimal evolved '); box off; ylabel('Output unit'); axis([0 numel(gens.de
 
 % index=ii(212)
 % index=ii(101)
-index=ii(102)
+% index=ii(102)
 % index=ii(103)
+index=ii(156)
 
 % index=ii(round(generations/2))
 gens.dets(index).net.g
@@ -614,11 +615,18 @@ plot(bin_dat.bins.center,bin_dat.bins.avg,'ko','MarkerSize',10,'MarkerFace','k')
 plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
-stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1];
+% stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1];
 % stim_list = [stim_list stim_list stim_list];
-% stim_list = zeros(1,6);
+stim_list = zeros(1,36);
+% stim_list = [zeros(1,9) ones(1,9)*2];
 
-inits = repmat([ii(101) ii(102) ii(103)],1,9);
+% inits = repmat([ii(101) ii(102) ii(103)],1,9);
+
+% inits = repmat([ii(156) ii(146) ii(150)],1,6);
+
+% inits = repmat(ii([156 150 189 173 197 210 218 209 164]),1,2);
+% inits = repmat(ii([156 150 189]),1,6);
+inits = repmat(ii([166 156 157 160 173 189]),1,6);
 
 switch simulation_type
    
@@ -629,8 +637,22 @@ switch simulation_type
         parfor g = 1:numel(stim_list)
 
             net_init = gens.dets(inits(g)).net % diverse initial states
-            net_init.wIn(net.oUind,:) = [0 0];
-            tau_trans = 1; % now controls wJ learning rate
+            
+%             net_init.wIn(net.oUind,:) = [0 0];
+%             tau_trans = 1; % now controls wJ learning rate
+            
+            % check Fig 3 equivalent
+            if g<=numel(stim_list)/2
+                net_init.wIn(net.oUind,:) = [0 0];
+                tau_trans = 1; % now controls wJ learning rate
+            else
+                net_init.wIn = net_init.wIn*3;
+%                 net_init.wIn(net.oUind,:) = [0 2];
+%                 net_init.wIn(net.oUind,:) = [0 0];
+                net_init.wIn(net.oUind,:) = [0 .33];
+                tau_trans = 1; % now controls wJ learning rate
+            end
+            
             filt_scale = 50; % plant scale factor currently
 
             % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
@@ -1366,6 +1388,137 @@ for g=1:numel(run)
     title('MODEL');
 end
 % colorized by some version of DA activity
+
+%% Examine good learner vs bad learner simulations
+
+clear model;
+
+% Bad learner is defined as higher init transient component, but lower eta_wIn (can imagine a homeostatic mechanism might produce this effect)
+% need to add predicted DA signal
+
+% as per fig 3
+early = 2:20;
+late = 141:161;
+
+s_scl = 2;
+m_scl = 0.5;
+
+
+jrcamp_tau = 500;
+t=1:3000;
+kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
+kern=kern/trapz(kern);
+
+for g=1:numel(run)
+    
+    trials_to_criterion(g) = numel(run(g).output.pass);
+        
+    model(g).anticip = [];
+    model(g).latency = [];
+    model(g).sens_gain = [];
+
+    model(g).anticip_u = [];
+    model(g).latency_u = [];
+    model(g).sens_gain_u = [];
+    
+    for kk=1:numel(run(g).output.pass)
+        if mod(kk,run(g).net.update) == 0 || kk == 1
+            
+            tmp_lat = run(g).output.pass(kk).lat;
+            if tmp_lat > 1000
+                tmp_lat = 1000;
+            end
+            model(g).anticip = [model(g).anticip run(g).output.pass(kk).anticip];
+            model(g).latency = [model(g).latency tmp_lat];
+            
+            model(g).da_100 = conv( s_scl*mean(run(g).pred_da_sense(early,:)) + m_scl*mean(run(g).pred_da_move(early,:)) , kern , 'same');
+            model(g).da_600 = conv( s_scl*mean(run(g).pred_da_sense(late,:)) + m_scl*mean(run(g).pred_da_move(late,:)) , kern , 'same');
+        end
+    end
+    
+    latency(g,:) = model(g).latency;
+    anticip(g,:) = model(g).anticip;
+    da_early(g,:) = model(g).da_100;
+    da_late(g,:) = model(g).da_600;            
+
+end
+
+% calculate DA differences and latency differences per init
+
+num_init = numel(unique(inits));
+
+for g=1:num_init
+    
+    good_i = g:num_init:numel(stim_list)/2;
+    bad_i = numel(stim_list)/2+g:num_init:numel(stim_list);
+    
+    corr_fig3.da(g) = max(mean(da_early(good_i,1500:end))) ;
+    corr_fig3.lat(g) = mean(mean(latency(good_i,end-40:end)) );
+    corr_fig3.da(g+num_init) = max(mean(da_early(bad_i,1500:end))) ;
+    corr_fig3.lat(g+num_init) = mean(mean(latency(bad_i,end-40:end))) ;
+    
+end
+
+individs = TNC_CreateRBColormap(6,'cpb');
+individs_model = polyfit(corr_fig3.lat,corr_fig3.da,1);
+figure(702); clf;
+subplot(311);
+plot([50:500] , polyval(individs_model,50:500) , 'k-');
+hold on;
+scatter(corr_fig3.lat,corr_fig3.da,[ones(1,6)*50 ones(1,6)*100],[1:6 1:6],'filled'); colormap(individs); axis([50 500 0.75e-3 2.25e-3]);
+ylabel('init. rew DA (au)'); xlabel('final latency (ms)'); box off;
+
+
+subplot(312);
+good_l = latency(1:numel(stim_list)/2,:);
+bad_l = latency(numel(stim_list)/2+1:end,:);
+% plot(mean(good_l),'color',[0 174 239]/255); hold on; plot(mean(bad_l),'color',[236,0,145]/255);    
+shadedErrorBar([0:160]*5,mean(good_l),std(good_l)./sqrt(numel(stim_list)/2),{'color',[0 174 239]/255}); hold on;
+shadedErrorBar([0:160]*5,mean(bad_l),std(bad_l)./sqrt(numel(stim_list)/2),{'color',[236,0,145]/255}); hold on;
+ylabel('Collection latency'); box off;
+
+subplot(313);
+good_l = anticip(1:numel(stim_list)/2,:);
+bad_l = anticip(numel(stim_list)/2+1:end,:);
+% plot(mean(good_l),'color',[0 174 239]/255); hold on; plot(mean(bad_l),'color',[236,0,145]/255);    
+shadedErrorBar([0:160]*5,mean(good_l),std(good_l)./sqrt(numel(stim_list)/2),{'color',[0 174 239]/255}); hold on;
+shadedErrorBar([0:160]*5,mean(bad_l),std(bad_l)./sqrt(numel(stim_list)/2),{'color',[236,0,145]/255}); hold on;
+ylabel('Anticipatory licking'); box off;
+xlabel('Trials');
+
+
+figure(701); clf;
+subplot(141);
+good_da = da_early(1:numel(stim_list)/2,:);
+bad_da = da_early(numel(stim_list)/2+1:end,:);
+% plot(mean(good_da),'color',[0 174 239]/255); hold on; plot(mean(bad_da),'color',[236,0,145]/255);    
+shadedErrorBar(-1599:1400,mean(good_da),std(good_da)./sqrt(numel(stim_list)/2),{'color',[0 174 239]/255}); hold on;
+shadedErrorBar(-1599:1400,mean(bad_da),std(bad_da)./sqrt(numel(stim_list)/2),{'color',[236,0,145]/255}); hold on;
+ylabel('DA response');
+
+subplot(142);
+good_da = da_late(1:numel(stim_list)/2,:);
+bad_da = da_late(numel(stim_list)/2+1:end,:);
+% plot(mean(good_da),'color',[0 174 239]/255); hold on; plot(mean(bad_da),'color',[236,0,145]/255);    
+shadedErrorBar(-1599:1400,mean(good_da),std(good_da)./sqrt(numel(stim_list)/2),{'color',[0 174 239]/255}); hold on;
+shadedErrorBar(-1599:1400,mean(bad_da),std(bad_da)./sqrt(numel(stim_list)/2),{'color',[236,0,145]/255}); hold on;
+ylabel('DA response');
+
+subplot(143);
+good_l = latency(1:numel(stim_list)/2,:);
+bad_l = latency(numel(stim_list)/2+1:end,:);
+% plot(mean(good_l),'color',[0 174 239]/255); hold on; plot(mean(bad_l),'color',[236,0,145]/255);    
+shadedErrorBar([0:160]*5,mean(good_l),std(good_l)./sqrt(numel(stim_list)/2),{'color',[0 174 239]/255}); hold on;
+shadedErrorBar([0:160]*5,mean(bad_l),std(bad_l)./sqrt(numel(stim_list)/2),{'color',[236,0,145]/255}); hold on;
+ylabel('Collection latency'); box off;
+
+subplot(144);
+good_l = anticip(1:numel(stim_list)/2,:);
+bad_l = anticip(numel(stim_list)/2+1:end,:);
+% plot(mean(good_l),'color',[0 174 239]/255); hold on; plot(mean(bad_l),'color',[236,0,145]/255);    
+shadedErrorBar([0:160]*5,mean(good_l),std(good_l)./sqrt(numel(stim_list)/2),{'color',[0 174 239]/255}); hold on;
+shadedErrorBar([0:160]*5,mean(bad_l),std(bad_l)./sqrt(numel(stim_list)/2),{'color',[236,0,145]/255}); hold on;
+ylabel('Anticipatory licking'); box off;
 
 %% run the RNN
 

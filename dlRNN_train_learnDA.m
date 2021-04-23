@@ -66,9 +66,9 @@ dt_div_tau  = dt/tau;
 % alpha_R     = 0.9;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
-eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
+eta_J       = 2.5e-5;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
-eta_wIn     = 1./30;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./30 .* tau_trans;     % best data match around 30-40 for tau_trans
 
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)

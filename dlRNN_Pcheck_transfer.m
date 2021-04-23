@@ -22,6 +22,7 @@ filter = filter1-filter2;
 switch trans_prob
     
     case 'pass-thru'
+        activity(activity<0) = 0;
         activity = activity ./ plant_scale;
         
     case 'non-linear'
