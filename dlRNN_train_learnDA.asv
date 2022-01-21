@@ -260,7 +260,7 @@ while pass <= 800 % stop when reward collection is very good
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;                    
                 else
-                    stim_bonus = 3;  % this does actually work                  
+                    stim_bonus = 2;  % this does actually work                  
                 end
                 
             case 0
@@ -268,14 +268,14 @@ while pass <= 800 % stop when reward collection is very good
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 3;                    
+                    stim_bonus = 2;                    
                 else
                     stim_bonus = 1;                    
                 end
                 
             case 20
                 error_r=1;
-                stim_bonus = 3;
+                stim_bonus = 2;
                 
             otherwise
                 stim_bonus = stim;
@@ -284,7 +284,7 @@ while pass <= 800 % stop when reward collection is very good
 
         % Miconi-like formalism
 %         delta_J = -eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
-        delta_J = -eta_J .* (stim_bonus.*eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
+        delta_J = -eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;

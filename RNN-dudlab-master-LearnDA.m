@@ -589,7 +589,7 @@ title('Optimal evolved '); box off; ylabel('Output unit'); axis([0 numel(gens.de
 % index=ii(101)
 % index=ii(102)
 % index=ii(103)
-index=ii(156)
+index=ii(159)
 
 % index=ii(round(generations/2))
 gens.dets(index).net.g
@@ -615,9 +615,9 @@ plot(bin_dat.bins.center,bin_dat.bins.avg,'ko','MarkerSize',10,'MarkerFace','k')
 plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
-% stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1];
+stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1];
 % stim_list = [stim_list stim_list stim_list];
-stim_list = zeros(1,36);
+% stim_list = zeros(1,36);
 % stim_list = [zeros(1,9) ones(1,9)*2];
 
 % inits = repmat([ii(101) ii(102) ii(103)],1,9);
@@ -626,7 +626,7 @@ stim_list = zeros(1,36);
 
 % inits = repmat(ii([156 150 189 173 197 210 218 209 164]),1,2);
 % inits = repmat(ii([156 150 189]),1,6);
-inits = repmat(ii([166 156 157 160 173 189]),1,6);
+inits = repmat(ii([159 166 191 195 171 158]),1,6);
 
 switch simulation_type
    
@@ -648,8 +648,8 @@ switch simulation_type
             else
                 net_init.wIn = net_init.wIn*3;
 %                 net_init.wIn(net.oUind,:) = [0 2];
-%                 net_init.wIn(net.oUind,:) = [0 0];
-                net_init.wIn(net.oUind,:) = [0 .33];
+                net_init.wIn(net.oUind,:) = [0 0];
+%                 net_init.wIn(net.oUind,:) = [0 .33];
                 tau_trans = 1; % now controls wJ learning rate
             end
             
