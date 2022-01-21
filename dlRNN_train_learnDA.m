@@ -1,4 +1,4 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim)
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 monitor = 1;
 
@@ -279,18 +279,19 @@ while pass <= 800 % stop when reward collection is very good
         net_out.J = net_out.J + delta_J;
 
 %------------ Calculate the proposed weight changes at inputs
+
         curr_val = 1 - (1-exp(-deltaRew/500)); % current reward value normalized over {0,1} like derivative
-%         pred_val_r = eta_DA_mult + stim_bonus; % predicted value at reward
         pred_val_r = outputs(1599); % predicted value at reward
+        pred_val_c = outputs(110) - outputs(99); % predicted value at cue
         
         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*(curr_val-pred_val_r)*stim_bonus;
+
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
         elseif net_out.wIn(net.oUind,2)<0
             net_out.wIn(net.oUind,2)=0;
         end
         
-        pred_val_c = outputs(110) - outputs(99); % predicted value at cue
         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*(curr_val-pred_val_r-pred_val_c)*stim_bonus;
         
         if net_out.wIn(net.oUind,1)>10
