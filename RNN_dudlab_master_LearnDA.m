@@ -1,4 +1,4 @@
-%% RNN-dudlab-master_learnDA
+%% RNN_dudlab_master_learnDA
 % High level script to control the construction and training of RNNs
  
 % Current ideas about future development:
