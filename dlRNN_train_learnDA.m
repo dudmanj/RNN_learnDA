@@ -91,6 +91,25 @@ orig_J = net_out.J;
 
 running_bar = []; running_err = []; running_ant = [];  running_lat = [];
 
+% Initialize the critic
+critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
+critic.cueTime = round(find( [0 diff(curr_input(1,:))]>0 , 1 ) / 100);
+num_t_steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
+critic.rpe_rew = 0;
+critic.rpe_cue = 0;
+critic.w = zeros(num_t_steps,1);
+critic.x = zeros(numel(w),num_t_steps);
+            
+for p=critic.cueTime:num_t_steps
+    critic.x(p,p) = 1;
+end
+
+critic.r = zeros(1,num_t_steps);
+critic.d = zeros(1,num_t_steps);
+critic.r(critic.rewTime) = 1;
+critic.v = zeros(1,num_t_steps);
+critic.alpha = 0.0015;
+
 % visualize training error:
 latency_cost = cost * (1-exp(-[60:1:1500]/500)');   
 emp_ant_cost = [-58.2970  528.5859  311.1233]; % empirical cost surface derived from simulations
@@ -183,6 +202,9 @@ while pass <= 800 % stop when reward collection is very good
         curr_cond   = target_list(cond);
         curr_input  = input{curr_cond};
         curr_target = target{curr_cond};
+
+        % run critic value estimator
+        [critic] = dlRNN_criticEngine(curr_input,critic);
 
         % run model
         [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
@@ -282,9 +304,15 @@ while pass <= 800 % stop when reward collection is very good
                     
         end
 
+
         % Miconi-like formalism
 %         delta_J = -eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
-        delta_J = -eta_J .* (stim_bonus.*eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
+
+        % ACTR formulation
+%         delta_J = -eta_J .* (stim_bonus.*eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
+
+        % ACTR-C formulation
+        delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (e * reward_rpe);
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -297,14 +325,22 @@ while pass <= 800 % stop when reward collection is very good
 
 %------------ Calculate the proposed weight changes at inputs
         
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus;
+        % ACTR formulation
+%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus;
+        % ACTR-C formulation
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + reward_rpe;
+        
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
         elseif net_out.wIn(net.oUind,2)<0
             net_out.wIn(net.oUind,2)=0;
         end
         
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus;        
+        % ACTR formulation
+%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus;        
+        % ACTR-C formulation
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + cue_rpe;
+
         if net_out.wIn(net.oUind,1)>10
             net_out.wIn(net.oUind,1)=10;
         elseif net_out.wIn(net.oUind,1)<0
