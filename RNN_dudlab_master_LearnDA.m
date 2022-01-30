@@ -615,7 +615,7 @@ plot(bin_dat.bins.center,bin_dat.bins.avg,'ko','MarkerSize',10,'MarkerFace','k')
 plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
-stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1];
+stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
 % stim_list = [stim_list stim_list stim_list];
 % stim_list = zeros(1,36);
 % stim_list = [zeros(1,9) ones(1,9)*2];
@@ -810,7 +810,7 @@ figure(503); clf;
     shadedErrorBar( [1:200]*run(1).net.update , mean(all_latency_u,1) , std(all_latency_u,[],1)./sqrt(size(all_latency_u,1)) ); hold on;
             ylabel('Latency to collect reward (ms)'); xlabel('Training trial bins');
 %             legend('Cued','Uncued');
-axis([0 200 0 1500]);
+axis([0 200 0 500]);
 
 figure(500); boxplot(trials_to_criterion); ylabel('Trials to criterion');
 

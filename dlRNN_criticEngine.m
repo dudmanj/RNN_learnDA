@@ -1,5 +1,7 @@
 function [critic] = dlRNN_criticEngine(critic,stim_cond)
 
+critic.et = zeros(numel(critic.w),1);
+
 for t = 1:critic.steps-1
 
     critic.v(t) = sum(critic.w .* critic.x(:,t));
@@ -19,3 +21,6 @@ for t = 1:critic.steps-1
     critic.w = critic.w + (critic.d(t) * critic.et);
 
 end
+
+critic.rpe_rew = critic.d(critic.rewTime);
+critic.rpe_cue = critic.d(critic.cueTime);

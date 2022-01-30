@@ -69,6 +69,7 @@ alpha_X     = 0.33;
 eta_J       = 2.5e-5;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
 eta_wIn     = 1./30 .* tau_trans;     % best data match around 30-40 for tau_trans
+% eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
 
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -92,23 +93,26 @@ orig_J = net_out.J;
 running_bar = []; running_err = []; running_ant = [];  running_lat = [];
 
 % Initialize the critic
-critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
-critic.cueTime = round(find( [0 diff(curr_input(1,:))]>0 , 1 ) / 100);
-num_t_steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
+curr_input = input{1};
+critic.rewTime = 1;
+critic.cueTime = 1;
+critic.steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
 critic.rpe_rew = 0;
 critic.rpe_cue = 0;
-critic.w = zeros(num_t_steps,1);
-critic.x = zeros(numel(w),num_t_steps);
+critic.w = zeros(critic.steps,1);
+critic.x = zeros(numel(critic.w),critic.steps);
             
-for p=critic.cueTime:num_t_steps
+for p=critic.cueTime+1:critic.steps
     critic.x(p,p) = 1;
 end
 
-critic.r = zeros(1,num_t_steps);
-critic.d = zeros(1,num_t_steps);
+critic.r = zeros(1,critic.steps);
+critic.d = zeros(1,critic.steps);
 critic.r(critic.rewTime) = 1;
-critic.v = zeros(1,num_t_steps);
-critic.alpha = 0.0015;
+critic.v = zeros(1,critic.steps);
+critic.alpha = 0.005;
+critic.lambda = 1;
+critic.gamma = 1;
 
 % visualize training error:
 latency_cost = cost * (1-exp(-[60:1:1500]/500)');   
@@ -204,7 +208,7 @@ while pass <= 800 % stop when reward collection is very good
         curr_target = target{curr_cond};
 
         % run critic value estimator
-        [critic] = dlRNN_criticEngine(curr_input,critic);
+        [critic] = dlRNN_criticEngine(critic,0);
 
         % run model
         [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
@@ -312,7 +316,10 @@ while pass <= 800 % stop when reward collection is very good
 %         delta_J = -eta_J .* (stim_bonus.*eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond));
 
         % ACTR-C formulation
-        delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (e * reward_rpe);
+        delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (eta_J * e * critic.rpe_rew);
+
+        % SHOULD I USE THE ERROR IDEA RATHER THAN RUNNING REWARD AVERAGE?
+%         delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* error_r ) + (eta_J * e * critic.rpe_rew);
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -328,7 +335,7 @@ while pass <= 800 % stop when reward collection is very good
         % ACTR formulation
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus;
         % ACTR-C formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + reward_rpe;
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + eta_wIn*critic.rpe_rew;
         
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
@@ -339,7 +346,7 @@ while pass <= 800 % stop when reward collection is very good
         % ACTR formulation
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus;        
         % ACTR-C formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + cue_rpe;
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + eta_wIn*critic.rpe_cue;
 
         if net_out.wIn(net.oUind,1)>10
             net_out.wIn(net.oUind,1)=10;
