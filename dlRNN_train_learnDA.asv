@@ -110,7 +110,7 @@ critic.r = zeros(1,critic.steps);
 critic.d = zeros(1,critic.steps);
 critic.r(critic.rewTime) = 1;
 critic.v = zeros(1,critic.steps);
-critic.alpha = 0.001;
+critic.alpha = 0.005;
 critic.lambda = 1;
 critic.gamma = 1;
 
@@ -346,9 +346,7 @@ while pass <= 800 % stop when reward collection is very good
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + eta_wIn*critic.rpe_rew;
         % ACTR-C formulation
-%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus.* eta_DA_mult + eta_wIn*critic.rpe_rew;
-        % ACTR-C formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + eta_wIn*critic.rpe_rew;
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus* eta_DA_mult + eta_wIn*critic.rpe_rew;
         
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
@@ -357,7 +355,7 @@ while pass <= 800 % stop when reward collection is very good
         end
         
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + (eta_wIn/10)*critic.rpe_cue;        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus* eta_DA_mult;        
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + eta_wIn*critic.rpe_cue;
 
@@ -473,11 +471,11 @@ while pass <= 800 % stop when reward collection is very good
             running_lat = [running_lat , median(lat_lck)];
             
             % Compile conditions
-            net_run.cond(curr_cond).out           = outputs;
-            net_run.cond(curr_cond).e             = e;
-            net_run.cond(curr_cond).hr            = hidden_r;
-            net_run.cond(curr_cond).hx            = hidden_x;
-            net_run.pass(pass).err(curr_cond)     = R_curr(curr_cond);
+            net_run.cond(curr_cond).out         = outputs;
+            net_run.cond(curr_cond).e           = e;
+            net_run.cond(curr_cond).hr          = hidden_r;
+            net_run.cond(curr_cond).hx                = hidden_x;
+            net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
             net_run.pass(pass).chk(curr_cond).v   = outputs_t;
             net_run.pass(pass).chk(curr_cond).o   = outputs;
             

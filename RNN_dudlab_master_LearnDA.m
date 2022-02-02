@@ -616,17 +616,8 @@ plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
 stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
-% stim_list = [stim_list stim_list stim_list];
 % stim_list = zeros(1,36);
-% stim_list = [zeros(1,9) ones(1,9)*2];
-
-% inits = repmat([ii(101) ii(102) ii(103)],1,9);
-
-% inits = repmat([ii(156) ii(146) ii(150)],1,6);
-
-% inits = repmat(ii([156 150 189 173 197 210 218 209 164]),1,2);
-% inits = repmat(ii([156 150 189]),1,6);
-inits = repmat(ii([159 166 191 195 171 158]),1,6);
+inits = repmat(ii([141 159 166 176 191 150]),1,6);
 
 switch simulation_type
    
@@ -646,7 +637,7 @@ switch simulation_type
                 net_init.wIn(net.oUind,:) = [0 0];
                 tau_trans = 1; % now controls wJ learning rate
             else
-                net_init.wIn = net_init.wIn*3;
+%                 net_init.wIn = net_init.wIn*3;
 %                 net_init.wIn(net.oUind,:) = [0 2];
                 net_init.wIn(net.oUind,:) = [0 0];
 %                 net_init.wIn(net.oUind,:) = [0 .33];
@@ -663,6 +654,10 @@ switch simulation_type
             run(g).net = net_out;
             run(g).pred_da_sense = pred_da_sense;
             run(g).pred_da_move = pred_da_move;
+            run(g).pred_da_sense_u = pred_da_sense_u;
+            run(g).pred_da_move_u = pred_da_move_u;
+            run(g).pred_da_sense_o = pred_da_sense_o;
+            run(g).pred_da_move_o = pred_da_move_o;
             disp(['Completed run: ' num2str(g)]);
         end
         
@@ -705,7 +700,7 @@ set(gca,'YDir','normal');
 for g=1:numel(run)
     
     final_output_layer(g,:) = run(g).net.J(1,:);
-    final_lat(g,1) = run(g).output.pass(400).lat;
+    final_lat(g,1) = run(g).output.pass(end).lat;
     
 end
 [vvv,iii] = sort(final_lat);

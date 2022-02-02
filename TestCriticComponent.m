@@ -15,7 +15,7 @@ critic.r = zeros(1,critic.steps);
 critic.d = zeros(1,critic.steps);
 critic.r(critic.rewTime) = 1;
 critic.v = zeros(1,critic.steps);
-critic.alpha = 0.005;
+critic.alpha = 0.001;
 critic.lambda = 1;
 critic.gamma = 1;
 critic
@@ -23,10 +23,11 @@ critic
 
 %% RUN the value model 
 stim_cond = 0;
+curr_rpe = [];
 for reps = 1:800
 
     [critic] = dlRNN_criticEngine(critic,stim_cond);
-
+    curr_rpe(reps,:) = critic.d;
 end
 
 figure(1); clf;
