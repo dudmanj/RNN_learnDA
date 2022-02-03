@@ -1,4 +1,6 @@
 %% LearnDA simulations scripts
+global pt_on;
+pt_on = 0;
 
 % Code to run simulation and display key output measures:
 
@@ -40,11 +42,11 @@ end
 %     run(1).output.pass(1).lat
 %     run(1).output.pass(1).lat_u
 %     run(1).output.pass(1).lat_o
-
+clear summary_data
 
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
-learn_ranges = [1 200 600; 100 300 800];
+learn_ranges = [1 40 120; 20 60 160];
 learn_ranges_da = [1 61; 60 120];
 
 jrcamp_tau = 500;
@@ -53,8 +55,9 @@ kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
 s_scl = 2;
 m_scl = 1;
+cnt = 1;
 
-close all;
+% close all;
 
 for g=[1 13 25]
 
@@ -72,14 +75,19 @@ for g=[1 13 25]
     summary_data.net(g).neti = gens.dets(inits(g)).net;
     
     % For each pass generate the continuous lick and dopamine traces
-    summary_data.lik(g).lk = zeros(numel(run(g).output.pass),size(run(g).output.cond.out,2));
-    summary_data.lik(g).lks = zeros(numel(run(g).output.pass),size(run(g).output.cond.out,2));
-    summary_data.lat(g).la = zeros(numel(run(g).output.pass),3);
+    summary_data.trials(g).tr = run(g).net.update:run(g).net.update:numel(run(g).output.pass);
+    summary_data.lik(g).lk = zeros(numel(summary_data.trials(g).tr),size(run(g).output.cond.out,2));
+    summary_data.lik(g).lks = zeros(numel(summary_data.trials(g).tr),size(run(g).output.cond.out,2));
+    summary_data.lat(g).la = zeros(numel(summary_data.trials(g).tr),3);
+    summary_data.lat(g).las = zeros(numel(summary_data.trials(g).tr),3);
 
-    for gg=1:numel(run(g).output.pass)
-        summary_data.lat(g).la(gg,:) = [run(g).output.pass(gg).lat run(g).output.pass(gg).lat_u run(g).output.pass(gg).lat_o];
-        summary_data.lik(g).lk(gg,unique(run(g).output.pass(gg).chk.v)) = 1;
-        summary_data.lik(g).lks(gg,:) = conv(summary_data.lik(g).lk(gg,:),lk_kern,'same');
+%     for gg=1:numel(run(g).output.pass)
+    cnt=1;
+    for gg=run(g).net.update:run(g).net.update:numel(run(g).output.pass)
+        summary_data.lat(g).la(cnt,:) = [run(g).output.pass(gg).lat run(g).output.pass(gg).lat_u run(g).output.pass(gg).lat_o];
+        summary_data.lik(g).lk(cnt,unique(run(g).output.pass(gg).chk.v)) = 1;
+        summary_data.lik(g).lks(cnt,:) = conv(summary_data.lik(g).lk(cnt,:),lk_kern,'same');
+        cnt = cnt+1;
     end
 
     for h=1:3
@@ -88,9 +96,9 @@ for g=[1 13 25]
     end
 
     subplot(141); imagesc(summary_data.lik(g).lks); colormap(bone); ylabel('Trials');
-    subplot(142); plot(1:size(summary_data.lat(g).las,1),summary_data.lat(g).las(:,1),'color',stim_map(3,:)); hold on;
+    subplot(142); plot(summary_data.trials(g).tr,summary_data.lat(g).las(:,1),'color',stim_map(3,:)); hold on;
     axis([0 800 0 750]);
-    plot(1:size(summary_data.lat(g).las,1),summary_data.lat(g).las(:,2),'color',stim_map(1,:));  
+    plot(summary_data.trials(g).tr,summary_data.lat(g).las(:,2),'color',stim_map(1,:));  
     ylabel('Latency');  xlabel('Trials');
     for h=1:3
         subplot(143); plot(1000*mean(summary_data.lik(g).lks(learn_ranges(1,h):learn_ranges(2,h),:)),'color',stim_map(h,:)); hold on;

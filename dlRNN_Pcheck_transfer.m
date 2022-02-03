@@ -4,7 +4,7 @@ option = 'state_simple';
 % trans_prob = 'non-linear';
 trans_prob = 'pass-thru';
 plotFlag = 0;
-reaction_time = 150;
+reaction_time = 100;
 
 % Original idea was just to scale this down
 plant_scale = filt_scale; 
@@ -117,7 +117,7 @@ switch option
             for kk=1:numel(tmp)
                 if numel([tmp(kk):tmp_neg(kk)]) > 100 | tmp(kk)>numel(activity)-100
 %                     offset = round(10*rand(1));
-                    offset = randperm(150,1);
+                    offset = randperm(60,1);
                     if tmp_neg(kk)+offset > numel(activity)
                         checks_tmp(tmp(kk)+offset:numel(activity)) = lick_template(1:numel([tmp(kk)+offset:numel(activity)]));
                     else

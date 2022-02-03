@@ -1,42 +1,43 @@
 function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 global monitor;
+global pt_on;
 
 %--------------- SIMULATION SCRIPT FOR MODEL IN Coddington & Dudman (201
-            t           = 1:800;
-            Mu          = 440;
-            Sigma       = 20;
-            tmp_gauss   = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
-            integral    = trapz(tmp_gauss);
-            tmp_gauss   = tmp_gauss./integral;
+    t           = 1:800;
+    Mu          = 440;
+    Sigma       = 20;
+    tmp_gauss   = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
+    integral    = trapz(tmp_gauss);
+    tmp_gauss   = tmp_gauss./integral;
 
-            da_imp_resp_f_se = tmp_gauss;
+    da_imp_resp_f_se = tmp_gauss;
 
-            indep_resp_func = 1;
-            t           = 1:800;
-            Mu          = 440;
-            Sigma       = 20;
-            tmp_gauss   = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
-            integral    = trapz(tmp_gauss);
-            tmp_gauss   = tmp_gauss./integral;
+    indep_resp_func = 1;
+    t           = 1:800;
+    Mu          = 440;
+    Sigma       = 20;
+    tmp_gauss   = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
+    integral    = trapz(tmp_gauss);
+    tmp_gauss   = tmp_gauss./integral;
 
-            da_imp_resp_f_ee = tmp_gauss;
+    da_imp_resp_f_ee = tmp_gauss;
 
-            if indep_resp_func
-                t       = 1:800;
-                Mu      = 440;
-                Sigma   = 60;
-                tmp_gauss = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
-                integral = trapz(tmp_gauss);
-                tmp_gauss = tmp_gauss./integral;
+    if indep_resp_func
+        t       = 1:800;
+        Mu      = 440;
+        Sigma   = 60;
+        tmp_gauss = ( 1./( sqrt(2.*pi.*Sigma.*Sigma) ) ) .* exp( -(t-Mu).^2 ./ (2.*Sigma).^2 );
+        integral = trapz(tmp_gauss);
+        tmp_gauss = tmp_gauss./integral;
 
-                scale_factor = 3;
-                da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.9.*tmp_gauss;
-                da_imp_resp_f_oi = -0.9.*tmp_gauss;                
-                da_imp_resp_f_ei = da_imp_resp_f_ei * 1.25;
-            else
-                da_imp_resp_f_ei = da_imp_resp_f_ee;
-            end
+        scale_factor = 3;
+        da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.9.*tmp_gauss;
+        da_imp_resp_f_oi = -0.9.*tmp_gauss;                
+        da_imp_resp_f_ei = da_imp_resp_f_ei * 1.25;
+    else
+        da_imp_resp_f_ei = da_imp_resp_f_ee;
+    end
 %--------------- SIMULATION SCRIPT FOR MODEL IN Coddington & Dudman (2018)
             
 pred_da_move = [];
@@ -141,8 +142,14 @@ for cond = 1:length(target_list)
 
         for qq=1:error_reps
             
-            % pass output through the transfer function
-            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
+            if pt_on
+                % pass combined anticipatory and reactive output through the transfer function
+                net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2);
+                outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
+            else
+                % pass output through the transfer function
+                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
+            end
 
             % Calculate error as a function something like:
             rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
@@ -220,8 +227,15 @@ while pass <= 800 % stop when reward collection is very good
 
         for qq=1:error_reps
             
-            % pass output through the transfer function
-            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
+
+            if pt_on
+                % pass combined anticipatory and reactive output through the transfer function
+                net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2) + curr_input(1,:)*net_out.wIn(net.oUind,1);
+                outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
+            else
+                % pass output through the transfer function
+                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
+            end
 
             % Calculate error as a function something like:
             rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
@@ -348,7 +362,7 @@ while pass <= 800 % stop when reward collection is very good
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus.* eta_DA_mult + eta_wIn*critic.rpe_rew;
         % ACTR-C formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + eta_wIn*critic.rpe_rew;
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + (eta_wIn/10)*critic.rpe_rew;
         
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
@@ -408,10 +422,25 @@ while pass <= 800 % stop when reward collection is very good
             o_tc = []; o_ti = [];
             
             for qq=1:10
-                % pass output through the transfer function
-                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);           
-                outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
-                outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale);           
+
+                if pt_on
+                    % pass combined anticipatory and reactive output through the transfer function
+                    net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
+                    outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);  
+                        figure(1); clf;
+                        plot(net_plant_in); drawnow;
+    
+                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
+                    
+                    net_plant_in = outputs_uncued + curr_input(2,:)*net_out.wIn(net.oUind,2);
+                    outputs_t_u = transfer_func_handle(net_plant_in./plant_scale,filt_scale);   
+
+                else
+                    % pass output through the transfer function
+                    outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);           
+                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
+                    outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale);           
+                end
 
                 % Calculate error as a function something like:
                 rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
