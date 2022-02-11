@@ -617,7 +617,8 @@ plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 %% train the RNN
 stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
 % stim_list = zeros(1,36);
-inits = repmat(ii([141 159 166 176 191 150]),1,6);
+% inits = repmat(ii([141 159 166 176 191 150]),1,6);
+inits = repmat(ii([141 96 100 110 104 55]),1,6);
 
 switch simulation_type
    
@@ -648,7 +649,7 @@ switch simulation_type
 
             % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
             stim = stim_list(g);
-            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
 
             run(g).output = output;
             run(g).net = net_out;

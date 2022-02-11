@@ -71,6 +71,7 @@ eta_J       = 2.5e-5;             % {1e-5 1e-4} range seems most stable for lear
 % eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
 eta_wIn     = 1./30 .* tau_trans;     % best data match around 30-40 for tau_trans
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
+wIn_scaling = 10;                       % Modifying input update rate for critic component
 
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -215,7 +216,7 @@ while pass <= 800 % stop when reward collection is very good
         curr_target = target{curr_cond};
 
         % run critic value estimator
-        [critic] = dlRNN_criticEngine(critic,0);
+        [critic] = dlRNN_criticEngine(critic,stim);
 
         % run model
         [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
@@ -300,7 +301,7 @@ while pass <= 800 % stop when reward collection is very good
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;                    
                 else
-                    stim_bonus = 4;  % this does actually work                  
+                    stim_bonus = 4;                  
                 end
                 
             case 0
@@ -314,8 +315,11 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 
             case 20
-                error_r = 1;
-                stim_bonus = 4;
+                if numel(find(outputs_t>1098 & outputs_t<1598))>1
+                    stim_bonus = 4;
+                else
+                    stim_bonus = 1;                    
+                end
                 
             otherwise
                 stim_bonus = stim;
@@ -362,7 +366,7 @@ while pass <= 800 % stop when reward collection is very good
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus.* eta_DA_mult + eta_wIn*critic.rpe_rew;
         % ACTR-C formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + (eta_wIn/10)*critic.rpe_rew;
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + (eta_wIn/wIn_scaling)*critic.rpe_rew;
         
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
@@ -371,7 +375,7 @@ while pass <= 800 % stop when reward collection is very good
         end
         
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + (eta_wIn/10)*critic.rpe_cue;        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + (eta_wIn/wIn_scaling)*critic.rpe_cue;        
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + eta_wIn*critic.rpe_cue;
 

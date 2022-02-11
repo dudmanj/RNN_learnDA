@@ -1,11 +1,16 @@
-%% LearnDA simulations scripts
+%% LearnDA simulations scripts for comparing Cntrl StimLick+ StimLick- Stim+Lick+
 global pt_on;
 pt_on = 0;
 
 % Code to run simulation and display key output measures:
 
-stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
-inits = repmat(ii([141 159 166 176 191 150]),1,6);
+% stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
+% % inits = repmat(ii([141 159 166 176 191 150]),1,6);
+% inits = repmat(ii([141  96 100 110 104  55]),1,6);
+
+stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 20 20 20 20 20 20 20 20 20 20 20 20];
+% inits = repmat(ii([141 159 166 176 191 150]),1,6);
+inits = repmat(ii([141  96 100 110 104 55]),1,8);
 
 clear run;
 parfor g = 1:numel(stim_list)
@@ -27,6 +32,11 @@ parfor g = 1:numel(stim_list)
     disp(['Completed run: ' num2str(g)]);
 
 end
+
+%% LearnDA simulations script for cued DA stim experiment
+
+
+
 
 %% Summary display plot for talks of training experience.
 
@@ -59,7 +69,7 @@ cnt = 1;
 
 % close all;
 
-for g=[1 13 25]
+for g=[1 13 25 37]+1
 
     switch stim_list(g)
         case -1
@@ -68,6 +78,8 @@ for g=[1 13 25]
             figure('Name',['Init ' num2str(inits(g)) ' : Cntrl' ],'NumberTitle','off'); clf;
         case 1
             figure('Name',['Init ' num2str(inits(g)) ' : StimLick+' ],'NumberTitle','off'); clf;
+        case 20
+            figure('Name',['Init ' num2str(inits(g)) ' : Stim++Lick+' ],'NumberTitle','off'); clf;
     end
 
     summary_data.cond(g) = stim_list(g);
