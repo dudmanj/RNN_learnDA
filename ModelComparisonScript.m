@@ -33,6 +33,8 @@ parfor g = 1:numel(stim_list)
 
 end
 
+save ~/'Dropbox (HHMI)'/run run stim_list inits
+
 %% LearnDA simulations script for cued DA stim experiment
 
 
