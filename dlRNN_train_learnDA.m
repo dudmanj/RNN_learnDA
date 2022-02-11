@@ -215,9 +215,6 @@ while pass <= 800 % stop when reward collection is very good
         curr_input  = input{curr_cond};
         curr_target = target{curr_cond};
 
-        % run critic value estimator
-        [critic] = dlRNN_criticEngine(critic,stim);
-
         % run model
         [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
         err_vector = zeros(1,error_reps);
@@ -303,9 +300,14 @@ while pass <= 800 % stop when reward collection is very good
                 else
                     stim_bonus = 4;                  
                 end
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
+
                 
             case 0
                 stim_bonus = 1;                    
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -313,16 +315,24 @@ while pass <= 800 % stop when reward collection is very good
                 else
                     stim_bonus = 1;                    
                 end
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
                 
             case 20
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 4;
+                    % run critic value estimator
+                    [critic] = dlRNN_criticEngine(critic,stim);
                 else
                     stim_bonus = 1;                    
+                    % run critic value estimator
+                    [critic] = dlRNN_criticEngine(critic,0);
                 end
                 
             otherwise
                 stim_bonus = stim;
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
                     
         end
 

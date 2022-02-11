@@ -1,4 +1,5 @@
 %% Initialize the critic
+curr_input  = input{1};
 critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
 critic.cueTime = ceil(find( [0 diff(curr_input(1,:))]>0 , 1 ) / 100) + 1;
 critic.steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
