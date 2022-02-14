@@ -71,6 +71,7 @@ eta_J       = 2.5e-5;             % {1e-5 1e-4} range seems most stable for lear
 % eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
 eta_wIn     = 1./30 .* tau_trans;     % best data match around 30-40 for tau_trans
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
+wIn_scaling = 10;                       % Modifying input update rate for critic component
 
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -214,9 +215,6 @@ while pass <= 800 % stop when reward collection is very good
         curr_input  = input{curr_cond};
         curr_target = target{curr_cond};
 
-        % run critic value estimator
-        [critic] = dlRNN_criticEngine(critic,0);
-
         % run model
         [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
         err_vector = zeros(1,error_reps);
@@ -300,11 +298,18 @@ while pass <= 800 % stop when reward collection is very good
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;                    
                 else
-                    stim_bonus = 4;  % this does actually work                  
+                    stim_bonus = 4;                  
                 end
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
+                    wIn_scaling = 10;
+
                 
             case 0
                 stim_bonus = 1;                    
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
+                    wIn_scaling = 10;
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -312,14 +317,28 @@ while pass <= 800 % stop when reward collection is very good
                 else
                     stim_bonus = 1;                    
                 end
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
+                    wIn_scaling = 10;
                 
             case 20
-                error_r = 1;
-                stim_bonus = 4;
+                if numel(find(outputs_t>1098 & outputs_t<1598))>1
+                    stim_bonus = 4;
+                    % run critic value estimator
+                    [critic] = dlRNN_criticEngine(critic,stim);
+                    wIn_scaling = 1;
+                else
+                    stim_bonus = 1;                    
+                    % run critic value estimator
+                    [critic] = dlRNN_criticEngine(critic,0);
+                    wIn_scaling = 10;
+                end
                 
             otherwise
                 stim_bonus = stim;
-                wIn_scaling 
+                % run critic value estimator
+                [critic] = dlRNN_criticEngine(critic,0);
+                    wIn_scaling = 10;
                     
         end
 
@@ -565,9 +584,11 @@ while pass <= 800 % stop when reward collection is very good
 %         sensory_resp_o = act_func_handle( [0 diff(outputs_omit)] );
 %         sensory_resp_u = act_func_handle( [0 diff(outputs_uncued)] );
         
+
         % proper daMult version
+% NEED TO UPDATE TO REFLECT TRUE PLANT VERSION SO d/dt output + d/dt wIn
         sensory_resp = zeros(1,3000);
-            sensory_resp(1640) = outputs(1610) - outputs(1599);
+            sensory_resp(1640) = outputs(1610) - outputs(1599) + (tau_wIn * );
             sensory_resp(160) = outputs(110) - outputs(99);
         sensory_resp_o = zeros(1,3000);
             sensory_resp_o(1640) = outputs_omit(1610) - outputs_omit(1599);

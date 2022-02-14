@@ -71,7 +71,7 @@ cnt = 1;
 
 % close all;
 
-for g=[1 13 25 37]+1
+for g=[1 13 25 37]
 
     switch stim_list(g)
         case -1
@@ -133,7 +133,7 @@ for g=[1 13 25 37]+1
     for h=1:size(learn_ranges_da,2)
         subplot(144); plot(1000*mean(summary_data.da(g).c(learn_ranges_da(1,h):learn_ranges_da(2,h),:)),'color',stim_map(h,:)); hold on;
     end
-    axis([0 3000 -1 7]);
+    axis([0 3000 -1 20]);
     ylabel('DA resp. (a.u.)');  xlabel('Time'); legend({'1-300' '300-600'},'location','northwest');
 
 end
