@@ -70,7 +70,8 @@ cnt = 1;
 
 % close all;
 
-for g=[1 13 25 37]
+% for g=[1 13 25 37]
+for g=[1 7]+1
 
     switch stim_list(g)
         case -1
@@ -165,6 +166,7 @@ parfor g = 1:numel(stim_list)
 
 end
 
+save ~/'Dropbox (HHMI)'/cued-da-run run stim_list inits
 
 %% Analysis of performance over learning
 % performance error on lick- vs lick+ trials over learning

@@ -146,10 +146,10 @@ for cond = 1:length(target_list)
         if pt_on
             % pass combined anticipatory and reactive output through the transfer function
             net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2);
-            outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
+            outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));            
         else
             % pass output through the transfer function
-            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
+            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale,zeros(1,numel(outputs)));            
         end
 
         % Calculate error as a function something like:
@@ -218,36 +218,39 @@ while pass <= 800 % stop when reward collection is very good
         anticip_lck = zeros(1,error_reps);
         lat_lck = zeros(1,error_reps);
 
-        for qq=1:error_reps
-            
-
-            if pt_on
-                % pass combined anticipatory and reactive output through the transfer function
-                net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2) + curr_input(1,:)*net_out.wIn(net.oUind,1);
-                outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
-            else
-                % pass output through the transfer function
-                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
-            end
-
-            % Calculate error as a function something like:
-            rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
-            tmp = find(outputs_t>rewTime,1);
-            if numel(tmp)==1
-                deltaRew = (outputs_t(tmp)-rewTime);
-            else
-                deltaRew = size(curr_input,2)-rewTime;
-            end
-            
-            err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
-            
-            err_vector(qq) = err;
-            err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var_set);
-            err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
-            anticip_lck(qq) = numel(find(outputs_t<rewTime));
-            lat_lck(qq) = deltaRew;
-
-        end
+%         for qq=1:error_reps
+%             
+% 
+%             if pt_on
+%                 % pass combined anticipatory and reactive output through the transfer function
+%                 net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2) + curr_input(1,:)*net_out.wIn(net.oUind,1);
+%                 outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
+%             else
+%                 % pass output through the transfer function
+%                 outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
+%             end
+% 
+%             % Calculate error as a function something like:
+                rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
+                if numel(rewTime)==0
+                    rewTime = 2999;
+                end
+%             tmp = find(outputs_t>rewTime,1);
+%             if numel(tmp)==1
+%                 deltaRew = (outputs_t(tmp)-rewTime);
+%             else
+%                 deltaRew = size(curr_input,2)-rewTime;
+%             end
+%             
+%             err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
+%             
+%             err_vector(qq) = err;
+%             err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var_set);
+%             err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
+%             anticip_lck(qq) = numel(find(outputs_t<rewTime));
+%             lat_lck(qq) = deltaRew;
+% 
+%         end
 
         % Save predicted error
         err                                     = mean(err_vector);
@@ -300,14 +303,14 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
 
                 
             case 0
                 stim_bonus = 1;                    
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -317,26 +320,19 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                 
             case 20
-                if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 4;
                     % run critic value estimator
                     [critic] = dlRNN_criticEngine(critic,stim);
                     wIn_scaling = 1;
-                else
-                    stim_bonus = 1;                    
-                    % run critic value estimator
-                    [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
-                end
                 
             otherwise
                 stim_bonus = stim;
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                     
         end
 
@@ -397,7 +393,7 @@ while pass <= 800 % stop when reward collection is very good
         
         for cond = 1:length(target_list)
             curr_cond   = target_list(cond);
-            curr_input  = input{curr_cond};
+            curr_input  = input_omit{curr_cond};
             curr_target = target{curr_cond};
             
 %----------------------------------------------------------------
@@ -418,54 +414,63 @@ while pass <= 800 % stop when reward collection is very good
                 if pt_on
                     % pass combined anticipatory and reactive output through the transfer function
                     net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
-                    outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);  
+                    outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));  
                         figure(1); clf;
                         plot(net_plant_in); drawnow;
     
-                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
+                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));           
                     
                     net_plant_in = outputs_uncued + curr_input(2,:)*net_out.wIn(net.oUind,2);
-                    outputs_t_u = transfer_func_handle(net_plant_in./plant_scale,filt_scale);   
+                    outputs_t_u = transfer_func_handle(net_plant_in./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));   
 
                 else
                     % pass output through the transfer function
-                    outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);           
-                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
-                    outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale);           
+                    outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale,zeros(1,numel(outputs)));           
+                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale,zeros(1,numel(outputs)));           
+                    outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale,zeros(1,numel(outputs)));           
                 end
 
-                % Calculate error as a function something like:
+%                 % Calculate error as a function something like:
                 rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
-                tmp = find(outputs_t>rewTime,1);
-                if numel(tmp)==1
-                    deltaRew = (outputs_t(tmp)-rewTime);
-                else
-                    deltaRew = size(curr_input,2)-rewTime;
+                if numel(rewTime)==0
+                    rewTime = 2999;
                 end
-                tmp = find(outputs_t_o>rewTime,1);
-                if numel(tmp)==1
-                    deltaRew_o = (outputs_t_o(tmp)-rewTime);
-                else
-                    deltaRew_o = size(curr_input,2)-rewTime;
-                end
-                tmp = find(outputs_t_u>rewTime,1);
-                if numel(tmp)==1
-                    deltaRew_u = (outputs_t_u(tmp)-rewTime);
-                else
-                    deltaRew_u = size(curr_input,2)-rewTime;
-                end
+%                 tmp = find(outputs_t>rewTime,1);
+%                 if numel(tmp)==1
+%                     deltaRew = (outputs_t(tmp)-rewTime);
+%                 else
+%                     deltaRew = size(curr_input,2)-rewTime;
+%                 end
+%                 tmp = find(outputs_t_o>rewTime,1);
+%                 if numel(tmp)==1
+%                     deltaRew_o = (outputs_t_o(tmp)-rewTime);
+%                 else
+%                     deltaRew_o = size(curr_input,2)-rewTime;
+%                 end
+%                 tmp = find(outputs_t_u>rewTime,1);
+%                 if numel(tmp)==1
+%                     deltaRew_u = (outputs_t_u(tmp)-rewTime);
+%                 else
+%                     deltaRew_u = size(curr_input,2)-rewTime;
+%                 end
                 
-                err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
-                                
+%                 err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
+                err = 0;
+                
                 err_vector(qq) = err;
-                err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var);
-                err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
+%                 err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var);
+%                 err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
+                err_vector_x(qq) = 0;
+                err_vector_y(qq) = 0;
                 anticip_lck(qq) = numel(find(outputs_t<rewTime & outputs_t>600));
                     anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime & outputs_t_o>600));
                     anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime & outputs_t_u>600));
-                lat_lck(qq) = deltaRew;
-                    lat_lck_o(qq) = deltaRew_o;
-                    lat_lck_u(qq) = deltaRew_u;
+%                 lat_lck(qq) = deltaRew;
+%                     lat_lck_o(qq) = deltaRew_o;
+%                     lat_lck_u(qq) = deltaRew_u;
+                lat_lck(qq) = 3000;
+                    lat_lck_o(qq) = 3000;
+                    lat_lck_u(qq) = 3000;
                 o_tc = [o_tc outputs_t];
                 o_ti = [o_ti ones(1,numel(outputs_t))*qq];
             end
@@ -559,14 +564,18 @@ while pass <= 800 % stop when reward collection is very good
 
         % proper daMult version
 % NEED TO UPDATE TO REFLECT TRUE PLANT VERSION SO d/dt output + d/dt wIn
+
+        in_drive(1) = max(input_omit{curr_cond}(1,:));
+        in_drive(2) = max(input_omit{curr_cond}(2,:));
+
         sensory_resp = zeros(1,3000);
-            sensory_resp(1640) = outputs(1610) - outputs(1599) + (tau_wIn * net_out.wIn(net.oUind,2));
-            sensory_resp(160) = outputs(110) - outputs(99) + (tau_wIn * net_out.wIn(net.oUind,1) * 0.7);
+            sensory_resp(1640) = outputs(1610) - outputs(1599) + (tau_wIn * net_out.wIn(net.oUind,2) * in_drive(2));
+            sensory_resp(160) = outputs(110) - outputs(99) + (tau_wIn * net_out.wIn(net.oUind,1) * in_drive(1));
         sensory_resp_o = zeros(1,3000);
             sensory_resp_o(1640) = outputs_omit(1610) - outputs_omit(1599);
-            sensory_resp_o(160) = outputs_omit(110) - outputs_omit(99) + (tau_wIn * net_out.wIn(net.oUind,1) * 0.7);
+            sensory_resp_o(160) = outputs_omit(110) - outputs_omit(99) + (tau_wIn * net_out.wIn(net.oUind,1) * in_drive(1));
         sensory_resp_u = zeros(1,3000);
-            sensory_resp_u(1640) = outputs_uncued(1610) - outputs_uncued(1599) + (tau_wIn * net_out.wIn(net.oUind,2));
+            sensory_resp_u(1640) = outputs_uncued(1610) - outputs_uncued(1599) + (tau_wIn * net_out.wIn(net.oUind,2) * in_drive(2));
             sensory_resp_u(160) = outputs_uncued(110) - outputs_uncued(99);
         
         
@@ -589,7 +598,7 @@ while pass <= 800 % stop when reward collection is very good
         % Find state transitions in behavior
         pred_da_time = zeros(1,size(hidden_r,2));
         for qq=1:error_reps
-            [outputs_t,state] = transfer_func_handle(outputs./plant_scale,filt_scale);
+            [outputs_t,state] = transfer_func_handle(outputs./plant_scale,filt_scale,zeros(1,numel(outputs)));
             all_inits = find([0 diff(state)]==1);
             cons_inits = find(all_inits>rewTime,1);
             if cons_inits>1
@@ -620,7 +629,7 @@ while pass <= 800 % stop when reward collection is very good
         % Find state transitions in behavior
         pred_da_time_u = zeros(1,size(hidden_r_uncued,2));
         for qq=1:error_reps
-            [outputs_t_u,state_u] = transfer_func_handle(outputs_uncued,filt_scale);
+            [outputs_t_u,state_u] = transfer_func_handle(outputs_uncued,filt_scale,zeros(1,numel(outputs)));
             all_inits_u = find([0 diff(state_u)]==1);
             cons_inits_u = find(all_inits_u>rewTime,1);
             if numel(cons_inits_u)>0
@@ -641,7 +650,7 @@ while pass <= 800 % stop when reward collection is very good
         % Find state transitions in behavior
         pred_da_time_o = zeros(1,size(hidden_r_omit,2));
         for qq=1:error_reps
-            [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale);
+            [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale,zeros(1,numel(outputs)));
             all_inits_o = find([0 diff(state_o)]==1);
             cons_inits_o = find(all_inits_o>rewTime,1);
             if numel(cons_inits_o)>0

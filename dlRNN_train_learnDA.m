@@ -1,4 +1,4 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 global monitor;
 global pt_on;
@@ -302,14 +302,14 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
 
                 
             case 0
                 stim_bonus = 1;                    
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -319,7 +319,7 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                 
             case 20
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -331,14 +331,14 @@ while pass <= 800 % stop when reward collection is very good
                     stim_bonus = 1;                    
                     % run critic value estimator
                     [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                 end
                 
             otherwise
                 stim_bonus = stim;
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
+                    wIn_scaling = 100;
                     
         end
 

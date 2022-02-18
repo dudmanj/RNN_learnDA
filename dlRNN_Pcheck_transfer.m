@@ -1,4 +1,4 @@
-function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale)
+function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale,varargin)
 
 option = 'state_simple';
 % trans_prob = 'non-linear';
@@ -6,6 +6,12 @@ trans_prob = 'pass-thru';
 plotFlag = 0;
 reaction_time = 100;
 
+if nargin==2
+    reward=[1*ones(1,1600) 100*ones(1,1400)];
+else
+    reward = varargin{1};
+end
+        
 % Original idea was just to scale this down
 plant_scale = filt_scale; 
 
@@ -87,9 +93,7 @@ switch option
         
         norm_activity     = activity + back_p;
         rand_chks          = rand(1,numel(activity));
-        
-        reward=[1*ones(1,1600) 100*ones(1,1400)];
-            
+                    
         for pp=1:numel(activity)-1
             
             act_p = norm_activity(pp);
