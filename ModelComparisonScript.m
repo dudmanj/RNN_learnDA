@@ -37,6 +37,7 @@ parfor g = 1:numel(stim_list)
 end
 
 save ~/'Dropbox (HHMI)'/run run stim_list inits
+
 %% Summary display plot for talks of training experience.
 
 % To plot:
@@ -138,6 +139,31 @@ end
 
 
 %% LearnDA simulations script for cued DA stim experiment
+
+
+stim_list = [0 0 0 0 0 0 20 20 20 20 20 20];
+inits = repmat(ii([141 159 100 110 104 55]),1,2);
+
+clear run;
+parfor g = 1:numel(stim_list)
+
+    net_init = gens.dets(inits(g)).net % diverse initial states
+                
+    net_init.wIn(net.oUind,:) = [0 0];
+    tau_trans = 1; % now controls wJ learning rate
+    filt_scale = 50; % plant scale factor currently
+
+    % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
+    stim = stim_list(g);
+    [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_cuedDAstim(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+
+    run(g).output = output;
+    run(g).net = net_out;
+    run(g).pred_da_sense = pred_da_sense;
+    run(g).pred_da_move = pred_da_move;
+    disp(['Completed run: ' num2str(g)]);
+
+end
 
 
 %% Analysis of performance over learning
