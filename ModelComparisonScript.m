@@ -1,3 +1,6 @@
+
+load ~/'Dropbox (HHMI)'/matlab.mat
+
 %% LearnDA simulations scripts for comparing Cntrl StimLick+ StimLick- Stim+Lick+
 global pt_on;
 pt_on = 0;
@@ -34,12 +37,6 @@ parfor g = 1:numel(stim_list)
 end
 
 save ~/'Dropbox (HHMI)'/run run stim_list inits
-
-%% LearnDA simulations script for cued DA stim experiment
-
-
-
-
 %% Summary display plot for talks of training experience.
 
 % To plot:
@@ -54,6 +51,7 @@ save ~/'Dropbox (HHMI)'/run run stim_list inits
 %     run(1).output.pass(1).lat
 %     run(1).output.pass(1).lat_u
 %     run(1).output.pass(1).lat_o
+
 clear summary_data
 
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
@@ -138,15 +136,26 @@ for g=[1 13 25 37]
 
 end
 
-%% Comparison across distinct run types
 
+%% LearnDA simulations script for cued DA stim experiment
+
+
+%% Analysis of performance over learning
+% performance error on lick- vs lick+ trials over learning
+
+
+
+%% Comparison across distinct run types
+stim_cat = unique(stim_list);
+stim_labels = { 'Lick-','Control','Lick+','Stim++Lick+' };
 figure(601); clf;
             
-    for sg = 1:3
+    for sg = 1:numel(stim_cat)
         inds = find(stim_list==stim_cat(sg));
         plot(0:5:800,sgolayfilt(mean(model_runs.anticip(inds,:)),3,7),'color',stim_map(sg,:),'linewidth',2); hold on;
     end
-    legend('Lick-','Control','Lick+');
+    legend(stim_labels(1:numel(stim_cat)));
+
     ylabel('Anticipatory licks'); xlabel('Training trials'); 
     all_latency = zeros(numel(run) , 200); 
     all_latency_u = zeros(numel(run) , 200); 
