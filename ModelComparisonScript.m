@@ -3,7 +3,7 @@ load ~/'Dropbox (HHMI)'/matlab.mat
 
 %% LearnDA simulations scripts for comparing Cntrl StimLick+ StimLick- Stim+Lick+
 global pt_on;
-pt_on = 0;
+pt_on = 1;
 
 % Code to run simulation and display key output measures:
 
@@ -47,6 +47,8 @@ save ~/'Dropbox (HHMI)'/run run stim_list inits
 % Fraction lick+ trials
 %     per trial lick analysis is here:
 %     run(1).output.pass(1).chk.v
+% Performance errors on lick+ / lick- trials (maybe seeing the sign effect
+% that stimLick exploits?)
 
 % cued vs uncued latency
 %     run(1).output.pass(1).lat
@@ -97,10 +99,14 @@ for g=[1 7]+1
 
 %     for gg=1:numel(run(g).output.pass)
     cnt=1;
-    for gg=run(g).net.update:run(g).net.update:numel(run(g).output.pass)
+    for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)]
         summary_data.lat(g).la(cnt,:) = [run(g).output.pass(gg).lat run(g).output.pass(gg).lat_u run(g).output.pass(gg).lat_o];
         summary_data.lik(g).lk(cnt,unique(run(g).output.pass(gg).chk.v)) = 1;
         summary_data.lik(g).lks(cnt,:) = conv(summary_data.lik(g).lk(cnt,:),lk_kern,'same');
+
+        summary_data.pe(g).pe(cnt) = run(g).output.pass(gg).pe;
+        summary_data.plck(g).plck(cnt) = run(g).output.pass(gg).plck;
+
         cnt = cnt+1;
     end
 

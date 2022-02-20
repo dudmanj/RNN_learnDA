@@ -513,6 +513,9 @@ while pass <= 800 % stop when reward collection is very good
             
             % Save predicted error
             R_curr(curr_cond)   = mean(err_vector);
+                net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
+                net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
+
             R_bar_prev(curr_cond) = R_bar(curr_cond);
             R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
 
