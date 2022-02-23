@@ -67,9 +67,9 @@ dt_div_tau  = dt/tau;
 % alpha_R     = 0.9;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
-eta_J       = 2.5e-5;             % {1e-5 1e-4} range seems most stable for learning
+eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
-eta_wIn     = 1./30 .* tau_trans;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./30 .* (2-tau_trans);     % best data match around 30-40 for tau_trans
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.28; % roughly 1/3 of membrane tau
@@ -96,7 +96,7 @@ running_bar = []; running_err = []; running_ant = [];  running_lat = [];
 
 % Initialize the critic
 curr_input = input{1};
-critic.rewTime = 1;
+critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
 critic.cueTime = 1;
 critic.steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
 critic.rpe_rew = 0;
@@ -112,7 +112,7 @@ critic.r = zeros(1,critic.steps);
 critic.d = zeros(1,critic.steps);
 critic.r(critic.rewTime) = 1;
 critic.v = zeros(1,critic.steps);
-critic.alpha = 0.001;
+critic.alpha = 0.0005;
 critic.lambda = 1;
 critic.gamma = 1;
 
@@ -178,15 +178,15 @@ for cond = 1:length(target_list)
     R_bar(curr_cond)        = R_curr(curr_cond);        
 
     % Compile conditions
-            net_run.cond(curr_cond).out         = outputs;
-            net_run.cond(curr_cond).e           = e;
-            net_run.cond(curr_cond).hr          = hidden_r;
-            net_run.cond(curr_cond).hx                = hidden_x;
-            net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
-            net_run.pass(pass).chk(curr_cond).o   = outputs;
-            net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
-            net_run.pass(pass).lat(curr_cond)                = median(lat_lck);
-            net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime) - outputs(rewTime-1);    
+    net_run.cond(curr_cond).out         = outputs;
+    net_run.cond(curr_cond).e           = e;
+    net_run.cond(curr_cond).hr          = hidden_r;
+    net_run.cond(curr_cond).hx                = hidden_x;
+    net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
+    net_run.pass(pass).chk(curr_cond).o   = outputs;
+    net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
+    net_run.pass(pass).lat(curr_cond)                = median(lat_lck);
+    net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime) - outputs(rewTime-1);    
     
     figure(1); 
     plot(net_run.cond(curr_cond).out); hold on;
@@ -302,14 +302,14 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
 
                 
             case 0
                 stim_bonus = 1;                    
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -319,7 +319,7 @@ while pass <= 800 % stop when reward collection is very good
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                 
             case 20
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -331,14 +331,14 @@ while pass <= 800 % stop when reward collection is very good
                     stim_bonus = 1;                    
                     % run critic value estimator
                     [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                 end
                 
             otherwise
                 stim_bonus = stim;
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                     
         end
 
@@ -544,6 +544,8 @@ while pass <= 800 % stop when reward collection is very good
             net_run.pass(pass).sens_gain(curr_cond) = outputs(1610) - outputs(1599);
                 net_run.pass(pass).sens_gain_o(curr_cond) = outputs_omit(1610) - outputs_omit(1599);
                 net_run.pass(pass).sens_gain_u(curr_cond) = outputs_uncued(1610) - outputs_uncued(1599);
+
+            net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
 
             net_run.pass(pass).trans_r(curr_cond)   = net_out.wIn(net.oUind,2);
                 net_run.pass(pass).trans_c(curr_cond)   = net_out.wIn(net.oUind,1);

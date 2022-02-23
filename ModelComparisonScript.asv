@@ -47,18 +47,19 @@ save ~/'Dropbox (HHMI)'/run run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
 % 1. Plot Cost vs Ant vs React for all Cntrl model sims X
-% 2. Cued-DA stim DA and licking predictions X
-% 3. RPE predictions 
+% 2. Cued-DA stim DA and licking predictions
+% 3. RPE predictions
 % 4. Lick+ / Lick- predictions
 % 5. PE|lick+ and PE|lick- vs training trials
 % 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
+% 7. Complete Methods section update
 
 %% 0. Need to compute a function that converts policy into a "transient" variable equivalent to experimental data
 
 trans_vec = 0:0.5:11;
 lat_vec = zeros(size(trans_vec))
 reps=1:1000;
-lat = zeros(size(reps));
+
 activity = zeros(1,3000);
 
 for j=1:numel(trans_vec)
@@ -82,7 +83,7 @@ react_model = fit( trans_vec' , lat_vec'-rct_off,'exp1');
 react_sm = react_model(trans_vec)+rct_off;
 hold on; plot(trans_vec,react_sm);
 
-%% 0.5 Compute full error surface
+%% 0. Compute full error surface
 s_map = TNC_CreateRBColormap(1000,'cpb');
 trans_vec = -0.5:0.5:11;
 sust_vec = -0.35:0.05:1;
@@ -245,7 +246,7 @@ legend(label_txt);
 
 % figure(); plot3(summary_data.analysis(1).lat(1,:),summary_data.analysis(1).ant(1,:),summary_data.analysis(1).cost(1,:));
 
-%% 2. Cued-DA stim simulation experiments in ACTR-C
+%% 2 Cued-DA stim simulation experiments in ACTR-C
 global pt_on;
 pt_on = 1;
 
@@ -322,24 +323,15 @@ for g=1:numel(run)
 
 end
 
-%% 5. PE|lick+ and PE|lick- vs training trials
-
-% Need to analyze these variables:
-% net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
-% net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
-% net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
-
-
-
 %%
 figure(31); clf;
 subplot(2,4,[1:3 5:7]);
 range = 20:20:140;
 tc_sl = trapz(summary_data.analysis(2).da_sl.c,2);
 plot([0 max(range)*5],[0 0],'k--'); hold on;
-plot(range*5,mean(tc_sl(range,:,:),3),'o-','linewidth',2,'color',[0 0.67 1],'MarkerFaceColor','w'); hold on;
+plot(range*5,mean(tc_sl(range,:,:),3),'o-','linewidth',3,'color',[0 0.67 1]); hold on;
 tc = trapz(summary_data.analysis(2).da.c,2);
-plot(range*5,mean(tc(range,:,:),3),'ko-','linewidth',2,'MarkerFaceColor','w'); hold on;
+plot(range*5,mean(tc(range,:,:),3),'ko-','linewidth',3,'MarkerFaceColor'); hold on;
 % shadedErrorBar(range*5,mean(tc(range,:,:),3),std(tc(range,:,:),[],3)); hold on;
 xlabel('Trials'); ylabel('Integrated cue response ACTR simulation (a.u.)');
 box off;

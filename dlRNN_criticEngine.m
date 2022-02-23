@@ -9,7 +9,7 @@ for t = 1:critic.steps-1
 
     % where d is TD error, r is reward, v is state value. Next, eligibility traces were updated by
     if stim_cond==20
-        critic.d(t) = (critic.r(t)*10) + critic.gamma*(critic.v(t+1) - critic.v(t));
+        critic.d(t) = (critic.r(t)*4) + critic.gamma*(critic.v(t+1) - critic.v(t));
     else
         critic.d(t) = critic.r(t) + critic.gamma*(critic.v(t+1) - critic.v(t));
     end

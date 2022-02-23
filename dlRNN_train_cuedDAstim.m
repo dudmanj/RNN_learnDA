@@ -96,7 +96,7 @@ running_bar = []; running_err = []; running_ant = [];  running_lat = [];
 
 % Initialize the critic
 curr_input = input{1};
-critic.rewTime = 1;
+critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
 critic.cueTime = 1;
 critic.steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
 critic.rpe_rew = 0;
@@ -110,9 +110,11 @@ end
 
 critic.r = zeros(1,critic.steps);
 critic.d = zeros(1,critic.steps);
-critic.r(critic.rewTime) = 1;
+ % No reward actually delivered
+ critic.r(critic.rewTime) = 0;
+ % No reward actually delivered
 critic.v = zeros(1,critic.steps);
-critic.alpha = 0.001;
+critic.alpha = 0.0005;
 critic.lambda = 1;
 critic.gamma = 1;
 
@@ -302,15 +304,17 @@ while pass <= 800 % stop when reward collection is very good
                     stim_bonus = 4;                  
                 end
                 % run critic value estimator
+                critic.r(critic.rewTime) = 0;
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
 
                 
             case 0
                 stim_bonus = 1;                    
                 % run critic value estimator
+                critic.r(critic.rewTime) = 0;
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -319,11 +323,13 @@ while pass <= 800 % stop when reward collection is very good
                     stim_bonus = 1;                    
                 end
                 % run critic value estimator
+                critic.r(critic.rewTime) = 0;
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                 
             case 20
                     stim_bonus = 4;
+                    critic.r(critic.rewTime) = 1;
                     % run critic value estimator
                     [critic] = dlRNN_criticEngine(critic,stim);
                     wIn_scaling = 1;
@@ -331,8 +337,9 @@ while pass <= 800 % stop when reward collection is very good
             otherwise
                 stim_bonus = stim;
                 % run critic value estimator
+                critic.r(critic.rewTime) = 0;
                 [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 100;
+                    wIn_scaling = 10;
                     
         end
 
