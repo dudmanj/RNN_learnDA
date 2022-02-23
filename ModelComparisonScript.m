@@ -43,7 +43,7 @@ parfor g = 1:numel(stim_list)
 
 end
 
-save ~/'Dropbox (HHMI)'/run run stim_list inits
+% save ~/'Dropbox (HHMI)'/run run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
 % 1. Plot Cost vs Ant vs React for all Cntrl model sims X
@@ -324,12 +324,61 @@ end
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 
+% load ~/'Dropbox (HHMI)'/matlab.mat
+% load ~/'Dropbox (HHMI)'/run.mat
+
 % Need to analyze these variables:
 % net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
 % net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
 % net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
 
+pe_map = TNC_CreateRBColormap(1024,'gp');
 
+scnt = 1;
+for g=1:numel(run)
+
+    if stim_list(g)==0 % Only use Cntrl simulations
+
+        cnt = 1;
+        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+            summary_data.analysis(5).pe(scnt,cnt) = run(g).output.pass(gg).pe;
+            summary_data.analysis(5).plck(scnt,cnt) = run(g).output.pass(gg).plck;
+            summary_data.analysis(5).chk(1).npi(scnt,cnt) = run(g).output.pass(gg).chk(1).npi(1605);
+            cnt = cnt+1;
+
+        end
+        
+        scnt = scnt+1;
+    end
+    
+end
+
+figure(50); 
+subplot(6,1,1);
+imagesc(summary_data.analysis(5).pe,[-250 250]); colormap(pe_map);
+subplot(6,1,2);
+shadedErrorBar(1:size(summary_data.analysis(5).pe,2),mean(summary_data.analysis(5).pe),std(summary_data.analysis(5).pe)); axis([0 cnt -200 200]); box off;
+subplot(6,1,3);
+imagesc(summary_data.analysis(5).plck,[-1 1]); colormap(pe_map);
+subplot(6,1,4);
+shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).plck),std(summary_data.analysis(5).plck)./sqrt(size(summary_data.analysis(5).plck,1))); box off; axis([0 cnt 0 1]); 
+subplot(6,1,5);
+imagesc(summary_data.analysis(5).chk(1).npi,[-10 10]); colormap(pe_map);
+subplot(6,1,6);
+shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).chk(1).npi),std(summary_data.analysis(5).chk(1).npi)./sqrt(size(summary_data.analysis(5).chk(1).npi,1))); box off; axis([0 cnt 0 11]); 
+
+figure(51);
+summary_data.analysis(5).all_cntrl_plck = summary_data.analysis(5).plck(1:numel(summary_data.analysis(5).plck));
+summary_data.analysis(5).all_cntrl_pe = summary_data.analysis(5).pe(1:numel(summary_data.analysis(5).plck));
+cnt = 1;
+for pp=unique(summary_data.analysis(5).all_cntrl_plck)
+    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = mean(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.std(cnt) = std(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
+    cnt = cnt+1;
+end
+shadedErrorBar(unique(summary_data.analysis(5).all_cntrl_plck),summary_data.analysis(5).bin_cntrl_LKperPE.avg,summary_data.analysis(5).bin_cntrl_LKperPE.std); axis([0 1 -120 0]); box off;
+ylabel('Mean PE'); xlabel('Prob(Lick+)');
 
 %%
 figure(31); clf;

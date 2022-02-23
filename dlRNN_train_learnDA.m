@@ -270,6 +270,10 @@ while pass <= 800 % stop when reward collection is very good
         net_run.pass(pass).lat(curr_cond)       = median(lat_lck);
         net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime+1) - outputs(rewTime);
         
+        net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
+        net_run.pass(pass).plck = numel(find(anticip_lck>1)) / error_reps;
+        net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
+
 %----------- Use elgibility at time of reward collection
         e = e_store(:,:,round(median(lat_lck)+rewTime));
 
