@@ -1,5 +1,8 @@
 
 load ~/'Dropbox (HHMI)'/matlab.mat
+load ~/'Dropbox (HHMI)'/run.mat
+% load ~/'Dropbox (HHMI)'/cued-da-run.mat
+
 
 %% LearnDA simulations scripts for comparing Cntrl (various inits) w/ StimLick+ StimLick- Stim+Lick+
 global pt_on;
@@ -324,9 +327,6 @@ end
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 
-% load ~/'Dropbox (HHMI)'/matlab.mat
-% load ~/'Dropbox (HHMI)'/run.mat
-
 % Need to analyze these variables:
 % net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
 % net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
@@ -340,7 +340,7 @@ for g=1:numel(run)
     if stim_list(g)==0 % Only use Cntrl simulations
 
         cnt = 1;
-        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+        for gg=[1:numel(run(g).output.pass)] % Just examine the probed trials
 
             summary_data.analysis(5).pe(scnt,cnt) = run(g).output.pass(gg).pe;
             summary_data.analysis(5).plck(scnt,cnt) = run(g).output.pass(gg).plck;
@@ -372,11 +372,17 @@ figure(51);
 summary_data.analysis(5).all_cntrl_plck = summary_data.analysis(5).plck(1:numel(summary_data.analysis(5).plck));
 summary_data.analysis(5).all_cntrl_pe = summary_data.analysis(5).pe(1:numel(summary_data.analysis(5).plck));
 cnt = 1;
-for pp=unique(summary_data.analysis(5).all_cntrl_plck)
-    summary_data.analysis(5).bin_cntrl
+for pp=0:1 %unique(summary_data.analysis(5).all_cntrl_plck)
+    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = mean(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.std(cnt) = std(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
     cnt = cnt+1;
 end
-scatter();
+
+summary_data.analysis(5).bin_cntrl_LKperPE.dist = summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp)';
+summary_data.analysis(5).bin_cntrl_LKperPE.g = [zeros(sum(summary_data.analysis(5).all_cntrl_plck==0),1) ; ones(sum(summary_data.analysis(5).all_cntrl_plck==1),1)
+
+shadedErrorBar([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,summary_data.analysis(5).bin_cntrl_LKperPE.std); axis([0 1 -50 50]); box off;
+ylabel('Mean PE'); xlabel('Prob(Lick+)');
 
 %%
 figure(31); clf;
