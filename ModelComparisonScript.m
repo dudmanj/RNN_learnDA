@@ -381,10 +381,14 @@ end
 summary_data.analysis(5).bin_cntrl_LKperPE.dist = [summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==0)' ; summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==1)'];
 summary_data.analysis(5).bin_cntrl_LKperPE.g = [zeros(sum(summary_data.analysis(5).all_cntrl_plck==0),1) ; ones(sum(summary_data.analysis(5).all_cntrl_plck==1),1)];
 
-plot([0 3],[0 0],'k--'); hold on;
-boxplot(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.g,'labels',{'Lick-' 'Lick+'}); 
-plot([1.2 1.8],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'k-','linewidth',4); box off;
+% plot([0 3],[0 0],'k--'); hold on;
+% boxplot(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.g,'labels',{'Lick-' 'Lick+'},'plotstyle','compact'); 
+% plot([1.2 1.8],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'k-','linewidth',4); box off;
+plot([-0.5 1.5],[0 0],'k--'); hold on;
+swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g,summary_data.analysis(5).bin_cntrl_LKperPE.dist,5,[0.5 0.5 0.5]);
+plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
 ylabel('Mean PE');
+
 
 %%
 figure(31); clf;
