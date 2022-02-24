@@ -1,5 +1,8 @@
 
 load ~/'Dropbox (HHMI)'/matlab.mat
+load ~/'Dropbox (HHMI)'/run.mat
+% load ~/'Dropbox (HHMI)'/cued-da-run.mat
+
 
 %% LearnDA simulations scripts for comparing Cntrl (various inits) w/ StimLick+ StimLick- Stim+Lick+
 global pt_on;
@@ -21,7 +24,7 @@ clear run;
 parfor g = 1:numel(stim_list)
 
     net_init = gens.dets(inits(g)).net % diverse initial states
-                
+
 %     net_init.wIn(net.oUind,:) = [0 0];
     net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
     tau_trans = tau_vec(g); % now controls eta_wIn learning rate
@@ -73,12 +76,12 @@ for j=1:numel(trans_vec)
         end
     end
     lat_vec(j) = mean(lat);
-end        
+end
 
 figure(10); clf;
 plot(trans_vec,lat_vec);
 rct_off = lat_vec(end);
-react_model = fit( trans_vec' , lat_vec'-rct_off,'exp1');    
+react_model = fit( trans_vec' , lat_vec'-rct_off,'exp1');
 react_sm = react_model(trans_vec)+rct_off;
 hold on; plot(trans_vec,react_sm);
 
@@ -143,7 +146,7 @@ zlabel('Cost');
 view(48,30);
 % set(gca,'YDir','reverse');
 set(gca,'Color',[0.95 0.95 0.95]);
-box on; 
+box on;
 
 %% 1. Plot Cost vs Ant vs React for all Cntrl model sims
 cmap = TNC_CreateRBColormap(6,'gp');
@@ -185,26 +188,26 @@ for g=1:numel(run)
         trans_off = median(summary_data.analysis(1).rct(scnt,trial_rng));
         sust_off = median(summary_data.analysis(1).ant(scnt,trial_rng));
         lat_off = median(summary_data.analysis(1).lat(scnt,trial_rng));
-        
+
         % Fit an exponential to the data
         trial_rng = 1:161;
-        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.1 -8 -0.1],'Upper',[5 0.1 5 0.1]);    
+        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.1 -8 -0.1],'Upper',[5 0.1 5 0.1]);
         transient_model = fit( trial_rng' , summary_data.analysis(1).rct(scnt,:)'-trans_off,'exp2','Lower',[50 -0.05 50 -0.5],'Upper',[500 0 500 0]);
         latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1400 0 1400 0]);
-        
+
         transient_sm = transient_model(trial_rng)+trans_off;
         sustained_sm = sustained_model(trial_rng)+sust_off;
         latency_sm = latency_model(trial_rng)+lat_off;
-        
+
         figure(2);
         total_sims = sum(stim_list==0);
         subplot(total_sims,3,((scnt-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); %axis([0 161 0 1400]);
         subplot(total_sims,3,((scnt-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]);
         subplot(total_sims,3,((scnt-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]);
-        
-        
+
+
         figure(1+fOff);
-        if scnt==1    
+        if scnt==1
             set(0,'DefaultFigureRenderer','painters');
             s = plot(cost_surf_sims); hold on;
 %             s = surf(sust_axis,trans_axis,cost_mat');  hold on;
@@ -219,7 +222,7 @@ for g=1:numel(run)
             view(48,30);
             % set(gca,'YDir','reverse');
             set(gca,'Color',[0.95 0.95 0.95]);
-            box on; 
+            box on;
         end
         if scnt<19
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
@@ -260,7 +263,7 @@ clear run;
 parfor g = 1:numel(stim_list)
 
     net_init = gens.dets(inits(g)).net % diverse initial states
-                
+
 %     net_init.wIn(net.oUind,:) = [0 0];
 %     tau_trans = 1; % now controls wJ learning rate
 
@@ -312,12 +315,12 @@ for g=1:numel(run)
             cnt = cnt+1;
 
         case 20
-            num_das = size(run(g).pred_da_move,1);        
+            num_das = size(run(g).pred_da_move,1);
             for ggg=1:num_das
                 summary_data.analysis(2).da_sl.c(ggg,:,sl_cnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
             end
             sl_cnt = sl_cnt+1;
-            
+
     end
 
 end
@@ -357,9 +360,6 @@ end
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 
-% load ~/'Dropbox (HHMI)'/matlab.mat
-% load ~/'Dropbox (HHMI)'/run.mat
-
 % Need to analyze these variables:
 % net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
 % net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
@@ -373,7 +373,7 @@ for g=1:numel(run)
     if stim_list(g)==0 % Only use Cntrl simulations
 
         cnt = 1;
-        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+        for gg=[1:numel(run(g).output.pass)] % Just examine the probed trials
 
             summary_data.analysis(5).pe(scnt,cnt) = run(g).output.pass(gg).pe;
             summary_data.analysis(5).plck(scnt,cnt) = run(g).output.pass(gg).plck;
@@ -381,13 +381,13 @@ for g=1:numel(run)
             cnt = cnt+1;
 
         end
-        
+
         scnt = scnt+1;
     end
-    
+
 end
 
-figure(50); 
+figure(50);
 subplot(6,1,1);
 imagesc(summary_data.analysis(5).pe,[-250 250]); colormap(pe_map);
 subplot(6,1,2);
@@ -395,11 +395,11 @@ shadedErrorBar(1:size(summary_data.analysis(5).pe,2),mean(summary_data.analysis(
 subplot(6,1,3);
 imagesc(summary_data.analysis(5).plck,[-1 1]); colormap(pe_map);
 subplot(6,1,4);
-shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).plck),std(summary_data.analysis(5).plck)./sqrt(size(summary_data.analysis(5).plck,1))); box off; axis([0 cnt 0 1]); 
+shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).plck),std(summary_data.analysis(5).plck)./sqrt(size(summary_data.analysis(5).plck,1))); box off; axis([0 cnt 0 1]);
 subplot(6,1,5);
 imagesc(summary_data.analysis(5).chk(1).npi,[-10 10]); colormap(pe_map);
 subplot(6,1,6);
-shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).chk(1).npi),std(summary_data.analysis(5).chk(1).npi)./sqrt(size(summary_data.analysis(5).chk(1).npi,1))); box off; axis([0 cnt 0 11]); 
+shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).chk(1).npi),std(summary_data.analysis(5).chk(1).npi)./sqrt(size(summary_data.analysis(5).chk(1).npi,1))); box off; axis([0 cnt 0 11]);
 
 figure(51);
 summary_data.analysis(5).all_cntrl_plck = summary_data.analysis(5).plck(1:numel(summary_data.analysis(5).plck));
@@ -447,7 +447,7 @@ for g=[1 13 25 37]
     summary_data.cond(g) = stim_list(g);
     summary_data.init(g) = inits(g);
     summary_data.net(g).neti = gens.dets(inits(g)).net;
-    
+
     % For each pass generate the continuous lick and dopamine traces
     summary_data.trials(g).tr = run(g).net.update:run(g).net.update:numel(run(g).output.pass);
     summary_data.lik(g).lk = zeros(numel(summary_data.trials(g).tr),size(run(g).output.cond.out,2));
@@ -476,7 +476,7 @@ for g=[1 13 25 37]
     subplot(141); imagesc(summary_data.lik(g).lks); colormap(bone); ylabel('Trials');
     subplot(142); plot(summary_data.trials(g).tr,summary_data.lat(g).las(:,1),'color',stim_map(3,:)); hold on;
     axis([0 800 0 750]);
-    plot(summary_data.trials(g).tr,summary_data.lat(g).las(:,2),'color',stim_map(1,:));  
+    plot(summary_data.trials(g).tr,summary_data.lat(g).las(:,2),'color',stim_map(1,:));
     ylabel('Latency');  xlabel('Trials');
     for h=1:3
         subplot(143); plot(1000*mean(summary_data.lik(g).lks(learn_ranges(1,h):learn_ranges(2,h),:)),'color',stim_map(h,:)); hold on;
@@ -557,17 +557,17 @@ box off; xlabel('Time from stim (ms)'); ylabel('ACTR simulated DA response (a.u.
 stim_cat = unique(stim_list);
 stim_labels = { 'Lick-','Control','Lick+','Stim++Lick+' };
 figure(601); clf;
-            
+
     for sg = 1:numel(stim_cat)
         inds = find(stim_list==stim_cat(sg));
         plot(0:5:800,sgolayfilt(mean(model_runs.anticip(inds,:)),3,7),'color',stim_map(sg,:),'linewidth',2); hold on;
     end
     legend(stim_labels(1:numel(stim_cat)));
 
-    ylabel('Anticipatory licks'); xlabel('Training trials'); 
-    all_latency = zeros(numel(run) , 200); 
-    all_latency_u = zeros(numel(run) , 200); 
-    
+    ylabel('Anticipatory licks'); xlabel('Training trials');
+    all_latency = zeros(numel(run) , 200);
+    all_latency_u = zeros(numel(run) , 200);
+
     for kk=1:numel(run)
         all_latency(kk,1:numel(model(kk).latency)) = model(kk).latency(1,1:numel(model(kk).latency));
         all_latency_u(kk,1:numel(model(kk).latency_u)) = model(kk).latency_u(1,1:numel(model(kk).latency_u));

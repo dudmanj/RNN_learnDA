@@ -1,5 +1,8 @@
 
 load ~/'Dropbox (HHMI)'/matlab.mat
+load ~/'Dropbox (HHMI)'/run.mat
+% load ~/'Dropbox (HHMI)'/cued-da-run.mat
+
 
 %% LearnDA simulations scripts for comparing Cntrl (various inits) w/ StimLick+ StimLick- Stim+Lick+
 global pt_on;
@@ -357,9 +360,6 @@ end
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 
-% load ~/'Dropbox (HHMI)'/matlab.mat
-% load ~/'Dropbox (HHMI)'/run.mat
-
 % Need to analyze these variables:
 % net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
 % net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
@@ -373,7 +373,7 @@ for g=1:numel(run)
     if stim_list(g)==0 % Only use Cntrl simulations
 
         cnt = 1;
-        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+        for gg=[1:numel(run(g).output.pass)] % Just examine the probed trials
 
             summary_data.analysis(5).pe(scnt,cnt) = run(g).output.pass(gg).pe;
             summary_data.analysis(5).plck(scnt,cnt) = run(g).output.pass(gg).plck;
@@ -391,27 +391,37 @@ figure(50);
 subplot(6,1,1);
 imagesc(summary_data.analysis(5).pe,[-250 250]); colormap(pe_map);
 subplot(6,1,2);
-shadedErrorBar(1:size(summary_data.analysis(5).pe,2),mean(summary_data.analysis(5).pe),std(summary_data.analysis(5).pe)); axis([0 cnt -200 200]); box off;
+plot(1:size(summary_data.analysis(5).pe,2),mean(summary_data.analysis(5).pe)); axis([0 cnt -200 200]); box off;
 subplot(6,1,3);
 imagesc(summary_data.analysis(5).plck,[-1 1]); colormap(pe_map);
 subplot(6,1,4);
-shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).plck),std(summary_data.analysis(5).plck)./sqrt(size(summary_data.analysis(5).plck,1))); box off; axis([0 cnt 0 1]); 
+plot(1:size(summary_data.analysis(5).plck,2),sgolayfilt(mean(summary_data.analysis(5).plck),3,11)); box off; axis([0 cnt 0.25 0.75]); 
 subplot(6,1,5);
 imagesc(summary_data.analysis(5).chk(1).npi,[-10 10]); colormap(pe_map);
 subplot(6,1,6);
 shadedErrorBar(1:size(summary_data.analysis(5).plck,2),mean(summary_data.analysis(5).chk(1).npi),std(summary_data.analysis(5).chk(1).npi)./sqrt(size(summary_data.analysis(5).chk(1).npi,1))); box off; axis([0 cnt 0 11]); 
 
-figure(51);
+figure(51); clf;
 summary_data.analysis(5).all_cntrl_plck = summary_data.analysis(5).plck(1:numel(summary_data.analysis(5).plck));
 summary_data.analysis(5).all_cntrl_pe = summary_data.analysis(5).pe(1:numel(summary_data.analysis(5).plck));
 cnt = 1;
-for pp=unique(summary_data.analysis(5).all_cntrl_plck)
+for pp=0:1 %unique(summary_data.analysis(5).all_cntrl_plck)
     summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = mean(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
     summary_data.analysis(5).bin_cntrl_LKperPE.std(cnt) = std(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
     cnt = cnt+1;
 end
-shadedErrorBar(unique(summary_data.analysis(5).all_cntrl_plck),summary_data.analysis(5).bin_cntrl_LKperPE.avg,summary_data.analysis(5).bin_cntrl_LKperPE.std); axis([0 1 -120 0]); box off;
-ylabel('Mean PE'); xlabel('Prob(Lick+)');
+
+summary_data.analysis(5).bin_cntrl_LKperPE.dist = [summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==0)' ; summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==1)'];
+summary_data.analysis(5).bin_cntrl_LKperPE.g = [zeros(sum(summary_data.analysis(5).all_cntrl_plck==0),1) ; ones(sum(summary_data.analysis(5).all_cntrl_plck==1),1)];
+
+% plot([0 3],[0 0],'k--'); hold on;
+% boxplot(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.g,'labels',{'Lick-' 'Lick+'},'plotstyle','compact'); 
+% plot([1.2 1.8],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'k-','linewidth',4); box off;
+plot([-0.5 1.5],[0 0],'k--'); hold on;
+swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g,summary_data.analysis(5).bin_cntrl_LKperPE.dist,5,[0.5 0.5 0.5]);
+plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
+ylabel('Mean PE');
+
 
 %% 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
