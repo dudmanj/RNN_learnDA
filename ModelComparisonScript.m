@@ -333,10 +333,9 @@ jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 2;
+s_scl = 1.5;
 m_scl = 1;
 cnt = 1;
-sl_cnt = 1;
 
 for g=1:numel(run)
 
@@ -352,9 +351,48 @@ for g=1:numel(run)
 
 end
 
+%% 3.5 Plotting RPE comparisons
+
 % Compute the cue response (averaged over 100 trial bins)
+
+for qq=1:8 % hundred trial bins
+    
+    curr_bin=[1:20] + (qq-1)*20;
+    
+    summary_data.analysis(3).DA_resp.c_tc(qq,:) = mean(mean(summary_data.analysis(3).da.c(curr_bin,:,:),1),3);
+    summary_data.analysis(3).DA_resp.c_tc_sem(qq,:) = std(mean(summary_data.analysis(3).da.c(curr_bin,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3));
+    summary_data.analysis(3).DA_resp.c_cue_int(qq) = trapz(summary_data.analysis(3).DA_resp.c_tc(qq,100:600));
+    
+end
+
+tmp = mean(mean(summary_data.analysis(3).da.c(1:2,:,:),1),3);
+
+figure(32); clf;
+plot(0:100:800,[trapz(tmp(1,100:600)) summary_data.analysis(3).DA_resp.c_cue_int],'ko-');
+
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
 % Show RPE traces for stable / end of learning
+
+figure(31); clf;
+
+stable_trial_range = 120:140;
+
+summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
+summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
+
+summary_data.analysis(3).DA_resp.u_avg = mean(mean(summary_data.analysis(3).da.u(stable_trial_range,:,:),1),3);
+summary_data.analysis(3).DA_resp.u_sem = std(mean(summary_data.analysis(3).da.u(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % ./ sqrt(size(summary_data.analysis(3).da.c,3))
+
+summary_data.analysis(3).DA_resp.o_avg = mean(mean(summary_data.analysis(3).da.o(stable_trial_range,:,:),1),3);
+summary_data.analysis(3).DA_resp.o_sem = std(mean(summary_data.analysis(3).da.o(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % ./ sqrt(size(summary_data.analysis(3).da.c,3))
+
+shadedErrorBar(-1599:1400,summary_data.analysis(3).DA_resp.o_avg,summary_data.analysis(3).DA_resp.c_sem,{'color',[0 0 1]}); hold on;
+shadedErrorBar(-1599:1400,summary_data.analysis(3).DA_resp.c_avg,summary_data.analysis(3).DA_resp.c_sem,{'color',[1 0 0]}); hold on;
+shadedErrorBar(-1599:1400,summary_data.analysis(3).DA_resp.u_avg,summary_data.analysis(3).DA_resp.c_sem,{'color',[0 0 0]}); hold on;
+plot([-1599 1400],[0 0],'k-.'); hold on;
+xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
+axis([-1600 1400 -2e-3 15e-3]); box off;
+
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
 
