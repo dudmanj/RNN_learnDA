@@ -48,9 +48,9 @@ end
 %% LAST BITS NEEDED FOR PAPER FIGURES
 % 1. Plot Cost vs Ant vs React for all Cntrl model sims X
 % 2. Cued-DA stim DA and licking predictions X
-% 3. RPE predictions 
+% 3. RPE predictions
 % 4. Lick+ / Lick- predictions
-% 5. PE|lick+ and PE|lick- vs training trials
+% 5. PE|lick+ and PE|lick- vs training trials X
 % 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
 %% 0. Need to compute a function that converts policy into a "transient" variable equivalent to experimental data
@@ -322,6 +322,39 @@ for g=1:numel(run)
 
 end
 
+%% 3. RPE predictions
+
+[stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
+lk_kern = TNC_CreateGaussian(500,40,1000,1);
+jrcamp_tau = 500;
+t=1:3000;
+kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
+kern=kern/trapz(kern);
+s_scl = 2;
+m_scl = 1;
+cnt = 1;
+sl_cnt = 1;
+
+for g=1:numel(run)
+
+    if stim_list(g)==0
+            num_das = size(run(g).pred_da_move,1);
+            for ggg=1:num_das
+                summary_data.analysis(3).da.c(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
+                summary_data.analysis(3).da.u(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense_u(ggg,:) + m_scl*run(g).pred_da_move_u(ggg,:) , kern , 'same');
+                summary_data.analysis(3).da.o(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense_o(ggg,:) + m_scl*run(g).pred_da_move_o(ggg,:) , kern , 'same');
+            end
+            cnt = cnt+1;
+    end
+
+end
+
+% Compute the cue response (averaged over 100 trial bins)
+% Compute reward responses for cntrl, uncued, omit same 100 trial bins
+% Show RPE traces
+
+%% 4. Lick+ / Lick- predictions
+
 %% 5. PE|lick+ and PE|lick- vs training trials
 
 % load ~/'Dropbox (HHMI)'/matlab.mat
@@ -373,54 +406,14 @@ summary_data.analysis(5).all_cntrl_plck = summary_data.analysis(5).plck(1:numel(
 summary_data.analysis(5).all_cntrl_pe = summary_data.analysis(5).pe(1:numel(summary_data.analysis(5).plck));
 cnt = 1;
 for pp=unique(summary_data.analysis(5).all_cntrl_plck)
-    summary_data.analysis(5).bin_cntrl
+    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = mean(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.std(cnt) = std(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
     cnt = cnt+1;
 end
-scatter();
+shadedErrorBar(unique(summary_data.analysis(5).all_cntrl_plck),summary_data.analysis(5).bin_cntrl_LKperPE.avg,summary_data.analysis(5).bin_cntrl_LKperPE.std); axis([0 1 -120 0]); box off;
+ylabel('Mean PE'); xlabel('Prob(Lick+)');
 
-%%
-figure(31); clf;
-subplot(2,4,[1:3 5:7]);
-range = 20:20:140;
-tc_sl = trapz(summary_data.analysis(2).da_sl.c,2);
-plot([0 max(range)*5],[0 0],'k--'); hold on;
-plot(range*5,mean(tc_sl(range,:,:),3),'o-','linewidth',2,'color',[0 0.67 1],'MarkerFaceColor','w'); hold on;
-tc = trapz(summary_data.analysis(2).da.c,2);
-plot(range*5,mean(tc(range,:,:),3),'ko-','linewidth',2,'MarkerFaceColor','w'); hold on;
-% shadedErrorBar(range*5,mean(tc(range,:,:),3),std(tc(range,:,:),[],3)); hold on;
-xlabel('Trials'); ylabel('Integrated cue response ACTR simulation (a.u.)');
-box off;
-axis([90 10+max(range)*5 -1 6]);
-
-mean_range = 120:121;
-tmp_sl = mean(summary_data.analysis(2).da_sl.c(mean_range,:,:),3);
-tmp = mean(   summary_data.analysis(2).da.c(mean_range,:,:),3);
-subplot(2,4,4);
-shadedErrorBar(-1600:1399,mean(tmp_sl,1),std(tmp_sl,[],1)); hold on; axis([-1700 1500 -0.001 0.011]);
-box off;
-
-subplot(2,4,8);
-shadedErrorBar(-1600:1399,mean(tmp,1),std(tmp,[],1)); hold on; axis([-1700 1500 -0.001 0.011]);
-box off; xlabel('Time from stim (ms)'); ylabel('ACTR simulated DA response (a.u.)');
-
-%% Summary display plot for talks of training experience.
-
-% To plot:
-
-% Trialwise / sessionwise:
-% Anticipatory licking
-% Fraction lick+ trials
-%     per trial lick analysis is here:
-%     run(1).output.pass(1).chk.v
-% Performance errors on lick+ / lick- trials (maybe seeing the sign effect
-% that stimLick exploits?)
-
-% cued vs uncued latency
-%     run(1).output.pass(1).lat
-%     run(1).output.pass(1).lat_u
-%     run(1).output.pass(1).lat_o
-
-clear summary_data
+%% 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
@@ -508,6 +501,49 @@ for g=[1 13 25 37]
     ylabel('DA resp. (a.u.)');  xlabel('Time'); legend({'1-300' '300-600'},'location','northwest');
 
 end
+%%
+figure(31); clf;
+subplot(2,4,[1:3 5:7]);
+range = 20:20:140;
+tc_sl = trapz(summary_data.analysis(2).da_sl.c,2);
+plot([0 max(range)*5],[0 0],'k--'); hold on;
+plot(range*5,mean(tc_sl(range,:,:),3),'o-','linewidth',2,'color',[0 0.67 1],'MarkerFaceColor','w'); hold on;
+tc = trapz(summary_data.analysis(2).da.c,2);
+plot(range*5,mean(tc(range,:,:),3),'ko-','linewidth',2,'MarkerFaceColor','w'); hold on;
+% shadedErrorBar(range*5,mean(tc(range,:,:),3),std(tc(range,:,:),[],3)); hold on;
+xlabel('Trials'); ylabel('Integrated cue response ACTR simulation (a.u.)');
+box off;
+axis([90 10+max(range)*5 -1 6]);
+
+mean_range = 120:121;
+tmp_sl = mean(summary_data.analysis(2).da_sl.c(mean_range,:,:),3);
+tmp = mean(   summary_data.analysis(2).da.c(mean_range,:,:),3);
+subplot(2,4,4);
+shadedErrorBar(-1600:1399,mean(tmp_sl,1),std(tmp_sl,[],1)); hold on; axis([-1700 1500 -0.001 0.011]);
+box off;
+
+subplot(2,4,8);
+shadedErrorBar(-1600:1399,mean(tmp,1),std(tmp,[],1)); hold on; axis([-1700 1500 -0.001 0.011]);
+box off; xlabel('Time from stim (ms)'); ylabel('ACTR simulated DA response (a.u.)');
+
+%% Summary display plot for talks of training experience.
+
+% To plot:
+
+% Trialwise / sessionwise:
+% Anticipatory licking
+% Fraction lick+ trials
+%     per trial lick analysis is here:
+%     run(1).output.pass(1).chk.v
+% Performance errors on lick+ / lick- trials (maybe seeing the sign effect
+% that stimLick exploits?)
+
+% cued vs uncued latency
+%     run(1).output.pass(1).lat
+%     run(1).output.pass(1).lat_u
+%     run(1).output.pass(1).lat_o
+
+
 
 
 
