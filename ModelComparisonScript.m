@@ -325,7 +325,7 @@ for g=1:numel(run)
 end
 
 %% 3. RPE predictions
-clear summary_data;
+% clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
@@ -359,22 +359,25 @@ for g=1:numel(run)
 
 end
 
-%% 3.5 Plotting RPE comparisons
+% 3.5 Plotting RPE comparisons
+
+% init_choice = randperm(18,9);
+init_choice = 1:18;
 
 for qq=1:8 % hundred trial bins
     
     curr_bin=[1:20] + (qq-1)*20;
 
-    summary_data.analysis(3).DA_resp.c_cue_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_cue_int(curr_bin,:),1 );
-    summary_data.analysis(3).DA_resp.c_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_rew_int(curr_bin,:),1 );
-    summary_data.analysis(3).DA_resp.u_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.u_rew_int(curr_bin,:),1 );
-    summary_data.analysis(3).DA_resp.o_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.o_rew_int(curr_bin,:),1 );
+    summary_data.analysis(3).DA_resp.c_cue_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_cue_int(curr_bin,init_choice),1 );
+    summary_data.analysis(3).DA_resp.c_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_rew_int(curr_bin,init_choice),1 );
+    summary_data.analysis(3).DA_resp.u_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.u_rew_int(curr_bin,init_choice),1 );
+    summary_data.analysis(3).DA_resp.o_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.o_rew_int(curr_bin,init_choice),1 );
     
 end
 
 figure(32); clf;
 subplot(121);
-errorbar(0:100:800,[mean(summary_data.analysis(3).DA_resp.c_cue_int(1,:)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[0 std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
+errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
 axis([0 800 0 1.5]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
@@ -392,7 +395,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 120:140;
+stable_trial_range = 120:160;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
@@ -412,6 +415,57 @@ axis([-1600 1400 -2e-3 15e-3]); box off;
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
 
+[stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
+lk_kern = TNC_CreateGaussian(500,40,1000,1);
+jrcamp_tau = 500;
+t=1:3000;
+kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
+kern=kern/trapz(kern);
+s_scl = 0;
+m_scl = 1;
+cnt = 1;
+
+for g=1:numel(run)
+
+    if stim_list(g)==0
+        
+        % Get DA traces
+        num_das = size(run(g).pred_da_move,1);
+        for ggg=1:num_das
+            summary_data.analysis(4).da.c(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
+        end
+            
+        % Get Pr(lick) per same trials
+        tcnt=1;
+        for gg=[1:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+            summary_data.analysis(4).anticip(tcnt,cnt) = run(g).output.pass(gg).anticip;
+            tcnt=tcnt+1;
+        end
+        
+        cnt = cnt+1;
+        
+    end
+
+end
+
+%% 4.5 Plot figure panels for lick conditioned DA responses
+
+figure(41); clf;
+
+range = 100:160;
+
+for gggg=1:size(summary_data.analysis(4).da.c,3)
+    
+    subplot(6,3,gggg);
+    lickplus = find(summary_data.analysis(4).anticip(range,gggg)>=10)
+    lickminus = find(summary_data.analysis(4).anticip(range,gggg)==0)
+    plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg)),'color',[0 0.67 1]); hold on;
+    plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg)),'color',[1 0 0]); hold on;
+    
+    title([num2str(gggg) ' ... ' num2str(numel(lickplus)/numel(lickminus))]);
+    
+end
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 

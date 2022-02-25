@@ -72,7 +72,8 @@ eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most st
 eta_wIn     = 1./30 .* (2-tau_trans);     % best data match around 30-40 for tau_trans
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
-tau_wIn = 0.28; % roughly 1/3 of membrane tau
+% tau_wIn = 0.28; % roughly 1/3 of membrane tau
+tau_wIn = 0.1; % roughly 1/3 of membrane tau
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
 
