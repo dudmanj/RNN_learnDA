@@ -290,7 +290,6 @@ end
 
 save ~/'Dropbox (HHMI)'/cued-da-run run stim_list inits
 
-
 %% 2.5 Plot figure panels for cued-DA predictions
 
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
@@ -338,7 +337,7 @@ m_scl = 1;
 cnt = 1;
 
 cue_win = 100:600;
-rew_win = 1600:2300;
+rew_win = 1600:2100;
 
 for g=1:numel(run)
 
@@ -360,7 +359,7 @@ for g=1:numel(run)
 
 end
 
-% 3.5 Plotting RPE comparisons
+%% 3.5 Plotting RPE comparisons
 
 for qq=1:8 % hundred trial bins
     
@@ -393,7 +392,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 140:160;
+stable_trial_range = 120:140;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
