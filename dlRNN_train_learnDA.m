@@ -73,7 +73,7 @@ eta_wIn     = 1./30 .* (2-tau_trans);     % best data match around 30-40 for tau
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 % tau_wIn = 0.28; % roughly 1/3 of membrane tau
-tau_wIn = 0.1; % roughly 1/3 of membrane tau
+tau_wIn = 0.25; % roughly 1/3 of membrane tau
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
 
@@ -680,7 +680,6 @@ while pass <= 800 % stop when reward collection is very good
 
         pred_da_move = [ pred_da_move ; conv(pred_da_time,da_imp_resp_f_ei,'same') ];
         pred_da_sense = [ pred_da_sense ; conv(pred_da_stime,da_imp_resp_f_se,'same') ];
-        pred_da_lick = [ pred_da_lick ; ];
 
         % Find state transitions in behavior
         pred_da_time_u = zeros(1,size(hidden_r_uncued,2));
