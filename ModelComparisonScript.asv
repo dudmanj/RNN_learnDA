@@ -16,7 +16,7 @@ pt_on = 1;
 % inits = repmat(ii([141 159 166 176 191 150]),1,6);
 
 stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18) 21*ones(1,6) 22*ones(1,6)];
-inits = repmat(ii([141 123 159 110 166 130]),1,14);
+inits = repmat(ii([141 123 159 110 166 140]),1,14);
 wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
 tau_vec = [repmat([ones(1,6) 1+rand(1,6) ones(1,6)],1,4) ones(1,12)];
 clear run;
@@ -224,7 +224,7 @@ for g=1:numel(run)
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
         end
-        if scnt<19
+        if scnt<7
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
             % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
@@ -414,7 +414,7 @@ xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
 axis([-1600 1400 -2e-3 15e-3]); box off;
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
-
+clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
@@ -422,7 +422,7 @@ t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
 s_scl = 1;
-m_scl = 1;
+m_scl = 0;
 cnt = 1;
 
 for g=1:numel(run)
@@ -433,18 +433,14 @@ for g=1:numel(run)
         num_das = size(run(g).pred_da_move,1);
         for ggg=1:num_das
             summary_data.analysis(4).da.c(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
-            summary_data.analysis(4).da.u(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense_u(ggg,:) + m_scl*run(g).pred_da_move_u(ggg,:) , kern , 'same');
-            summary_data.analysis(4).da.o(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense_o(ggg,:) + m_scl*run(g).pred_da_move_o(ggg,:) , kern , 'same');
-
         end
             
         % Get Pr(lick) per same trials
         tcnt=1;
-        for gg=[1:numel(run(g).output.pass)] % Just examine the probed trials
+        for gg=[1:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
 
-            summary_data.analysis(4).pe(tcnt,cnt) = run(g).output.pass(gg).pe;
-            summary_data.analysis(4).plck(tcnt,cnt) = run(g).output.pass(gg).plck;
-            summary_data.analysis(4).chk(1).npi(tcnt,cnt) = run(g).output.pass(gg).chk(1).npi(1605);
+            summary_data.analysis(4).anticip(tcnt,cnt) = run(g).output.pass(gg).anticip;
+            summary_data.analysis(4).outs(tcnt,:,cnt) = run(g).output.pass(gg).chk.o(1610)-run(g).output.pass(gg).chk.o(1599);
             tcnt=tcnt+1;
         end
         
@@ -454,7 +450,25 @@ for g=1:numel(run)
 
 end
 
-for gggg=1:
+%% 4.5 Plot figure panels for lick conditioned DA responses
+
+figure(41); clf;
+
+range = 80:160;
+
+for gggg=1:size(summary_data.analysis(4).da.c,3)
+    
+    subplot(6,3,gggg);
+    lickplus = find(summary_data.analysis(4).anticip(range,gggg)>=5);
+    lickminus = find(summary_data.analysis(4).anticip(range,gggg)==0);
+%     plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg)),'color',[0 0.67 1]); hold on;
+%     plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg)),'color',[1 0 0]); hold on;
+    plot(0,mean(summary_data.analysis(4).outs(range(lickplus),:,gggg)),'o','color',[0 0.67 1]); hold on;
+    plot(0,mean(summary_data.analysis(4).outs(range(lickminus),:,gggg)),'o','color',[1 0 0]); hold on;
+    axis([-10 20 -0.5 1.5]);
+    title([num2str(gggg) ' ... ' num2str(numel(lickplus)/numel(lickminus))]);
+    
+end
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 

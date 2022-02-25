@@ -680,6 +680,7 @@ while pass <= 800 % stop when reward collection is very good
 
         pred_da_move = [ pred_da_move ; conv(pred_da_time,da_imp_resp_f_ei,'same') ];
         pred_da_sense = [ pred_da_sense ; conv(pred_da_stime,da_imp_resp_f_se,'same') ];
+        pred_da_lick = [ pred_da_lick ; ];
 
         % Find state transitions in behavior
         pred_da_time_u = zeros(1,size(hidden_r_uncued,2));

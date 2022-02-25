@@ -414,15 +414,15 @@ xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
 axis([-1600 1400 -2e-3 15e-3]); box off;
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
-
+clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 0;
-m_scl = 1;
+s_scl = 1;
+m_scl = 0;
 cnt = 1;
 
 for g=1:numel(run)
@@ -437,9 +437,10 @@ for g=1:numel(run)
             
         % Get Pr(lick) per same trials
         tcnt=1;
-        for gg=[1:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
 
-            summary_data.analysis(4).anticip(tcnt,cnt) = run(g).output.pass(gg).anticip;
+            summary_data.analysis(4).plck(tcnt,cnt) = run(g).output.pass(gg).plck;
+            summary_data.analysis(4).outs(tcnt,:,cnt) = run(g).output.pass(gg).chk.o(1610)-run(g).output.pass(gg).chk.o(1599);
             tcnt=tcnt+1;
         end
         
@@ -453,16 +454,21 @@ end
 
 figure(41); clf;
 
-range = 100:160;
+range = 40:160;
 
 for gggg=1:size(summary_data.analysis(4).da.c,3)
     
     subplot(6,3,gggg);
-    lickplus = find(summary_data.analysis(4).anticip(range,gggg)>=10)
-    lickminus = find(summary_data.analysis(4).anticip(range,gggg)==0)
+    lickplus = find(summary_data.analysis(4).plck(range,gggg)>0.75);
+    lickminus = find(summary_data.analysis(4).plck(range,gggg)<0.5);
+    numel(lickminus)
     plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg)),'color',[0 0.67 1]); hold on;
     plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg)),'color',[1 0 0]); hold on;
-    
+%     plot(0,mean(summary_data.analysis(4).outs(range(lickplus),:,gggg)),'o','color',[0 0.67 1]); hold on;
+%     plot(0,mean(summary_data.analysis(4).outs(range(lickminus),:,gggg)),'o','color',[1 0 0]); hold on;
+%     plot(1,500*mean(summary_data.analysis(4).da.c(range(lickplus),1740,gggg)),'*','color',[0 0.67 1]); hold on;
+%     plot(1,500*mean(summary_data.analysis(4).da.c(range(lickminus),1740,gggg)),'s','color',[1 0 0]); hold on;
+%     axis([-1 3 -2 2]);
     title([num2str(gggg) ' ... ' num2str(numel(lickplus)/numel(lickminus))]);
     
 end
