@@ -16,7 +16,7 @@ pt_on = 1;
 % inits = repmat(ii([141 159 166 176 191 150]),1,6);
 
 stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18) 21*ones(1,6) 22*ones(1,6)];
-inits = repmat(ii([141 123 159 110 166 130]),1,14);
+inits = repmat(ii([141 123 159 110 166 131]),1,14);
 wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
 tau_vec = [repmat([ones(1,6) 1+rand(1,6) ones(1,6)],1,4) ones(1,12)];
 clear run;
@@ -224,7 +224,7 @@ for g=1:numel(run)
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
         end
-        if scnt<19
+        if scnt<7
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
             % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
