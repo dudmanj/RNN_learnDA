@@ -8,8 +8,10 @@ reaction_time = 100;
 
 if nargin==2
     reward=[1*ones(1,1600) 100*ones(1,1400)];
+    back_p_logic = 1;
 else
     reward = varargin{1};
+    back_p_logic = 0;
 end
         
 % Original idea was just to scale this down
@@ -91,7 +93,7 @@ switch option
         lick_template   = zeros(1,numel(activity));
         lick_template(1:150:numel(activity)) = 1;
         
-        norm_activity     = activity + back_p;
+        norm_activity     = activity + (back_p*back_p_logic);
         rand_chks          = rand(1,numel(activity));
                     
         for pp=1:numel(activity)-1

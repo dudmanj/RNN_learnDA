@@ -15,10 +15,10 @@ pt_on = 1;
 % inits = repmat(ii([141  96 100 110 104  55]),1,6);
 % inits = repmat(ii([141 159 166 176 191 150]),1,6);
 
-stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18)];
-inits = repmat(ii([141 191 178 110 166 130]),1,12);
-wIn_vec = repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4);
-tau_vec = repmat([ones(1,6) 1+rand(1,6) ones(1,6)],1,4);
+stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18) 21*ones(1,6) 22*ones(1,6)];
+inits = repmat(ii([141 123 159 110 166 130]),1,14);
+wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
+tau_vec = [repmat([ones(1,6) 1+rand(1,6) ones(1,6)],1,4) ones(1,12)];
 clear run;
 
 parfor g = 1:numel(stim_list)
@@ -46,7 +46,7 @@ parfor g = 1:numel(stim_list)
 
 end
 
-% save ~/'Dropbox (HHMI)'/run run stim_list inits
+save ~/'Dropbox (HHMI)'/run run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
 % 1. Plot Cost vs Ant vs React for all Cntrl model sims X
@@ -337,14 +337,23 @@ s_scl = 1;
 m_scl = 1;
 cnt = 1;
 
+cue_win = 100:600;
+rew_win = 1600:2300;
+
 for g=1:numel(run)
 
-    if stim_list(g)==0
+    if stim_list(g)==0 % & cnt<7 (depending upon whether one wants to consider individual differences also)
             num_das = size(run(g).pred_da_move,1);
             for ggg=1:num_das
                 summary_data.analysis(3).da.c(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
                 summary_data.analysis(3).da.u(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense_u(ggg,:) + m_scl*run(g).pred_da_move_u(ggg,:) , kern , 'same');
                 summary_data.analysis(3).da.o(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense_o(ggg,:) + m_scl*run(g).pred_da_move_o(ggg,:) , kern , 'same');
+
+                summary_data.analysis(3).DA_resp.c_cue_int(ggg,cnt) = trapz( summary_data.analysis(3).da.c(ggg,cue_win,cnt) );
+                summary_data.analysis(3).DA_resp.c_rew_int(ggg,cnt) = trapz( summary_data.analysis(3).da.c(ggg,rew_win,cnt) );
+                summary_data.analysis(3).DA_resp.u_rew_int(ggg,cnt) = trapz( summary_data.analysis(3).da.u(ggg,rew_win,cnt) );
+                summary_data.analysis(3).DA_resp.o_rew_int(ggg,cnt) = trapz( summary_data.analysis(3).da.o(ggg,rew_win,cnt) );
+
             end
             cnt = cnt+1;
     end
@@ -353,36 +362,30 @@ end
 
 % 3.5 Plotting RPE comparisons
 
-% Compute the cue response (averaged over 100 trial bins)
-
 for qq=1:8 % hundred trial bins
     
     curr_bin=[1:20] + (qq-1)*20;
-    
-    summary_data.analysis(3).DA_resp.c_tc(qq,:) = mean(mean(summary_data.analysis(3).da.c(curr_bin,:,:),1),3);
-    summary_data.analysis(3).DA_resp.u_tc(qq,:) = mean(mean(summary_data.analysis(3).da.u(curr_bin,:,:),1),3);
-    summary_data.analysis(3).DA_resp.o_tc(qq,:) = mean(mean(summary_data.analysis(3).da.o(curr_bin,:,:),1),3);
-    summary_data.analysis(3).DA_resp.c_tc_sem(qq,:) = std(mean(summary_data.analysis(3).da.c(curr_bin,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3));
-    summary_data.analysis(3).DA_resp.c_cue_int(qq) = trapz(summary_data.analysis(3).DA_resp.c_tc(qq,100:600));
-    summary_data.analysis(3).DA_resp.c_rew_int(qq) = trapz(summary_data.analysis(3).DA_resp.c_tc(qq,1600:2100));
-    summary_data.analysis(3).DA_resp.u_rew_int(qq) = trapz(summary_data.analysis(3).DA_resp.u_tc(qq,1600:2100));
-    summary_data.analysis(3).DA_resp.o_rew_int(qq) = trapz(summary_data.analysis(3).DA_resp.o_tc(qq,1700:3000)); %- trapz(summary_data.analysis(3).DA_resp.o_tc(qq,1400:1600));
+
+    summary_data.analysis(3).DA_resp.c_cue_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_cue_int(curr_bin,:),1 );
+    summary_data.analysis(3).DA_resp.c_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_rew_int(curr_bin,:),1 );
+    summary_data.analysis(3).DA_resp.u_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.u_rew_int(curr_bin,:),1 );
+    summary_data.analysis(3).DA_resp.o_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.o_rew_int(curr_bin,:),1 );
     
 end
 
-tmp = mean(mean(summary_data.analysis(3).da.c(1:2,:,:),1),3);
-
 figure(32); clf;
 subplot(121);
-plot(0:100:800,[trapz(tmp(1,100:600)) summary_data.analysis(3).DA_resp.c_cue_int],'ro-','linewidth',3);
+errorbar(0:100:800,[mean(summary_data.analysis(3).DA_resp.c_cue_int(1,:)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[0 std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
 axis([0 800 0 1.5]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 800],[0 0],'k-.'); hold on;
-plot(100:100:800,summary_data.analysis(3).DA_resp.c_rew_int,'ro-','linewidth',3); hold on;
-plot(100:100:800,summary_data.analysis(3).DA_resp.u_rew_int,'ko-','linewidth',3);
-plot(400:100:800,summary_data.analysis(3).DA_resp.o_rew_int(4:8),'bo-','linewidth',3);
-axis([100 800 -1 6]); 
+errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
+errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
+xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
+yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
+errorbar(100:100:800,xxx(1:8),yyy(1:8),'bo-','linewidth',3); hold on;
+axis([100 800 -0.5 5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -390,7 +393,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 110:130;
+stable_trial_range = 140:160;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
@@ -408,8 +411,8 @@ plot([-1599 1400],[0 0],'k-.'); hold on;
 xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
 axis([-1600 1400 -2e-3 15e-3]); box off;
 
-
 %% 4. Compare DA responses on lick+ and lick- trials predictions
+
 
 %% 5. PE|lick+ and PE|lick- vs training trials
 
@@ -477,6 +480,8 @@ ylabel('Mean PE');
 
 
 %% 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
+
+% Also need to add in 21 and 22 conditions (critic only predictions)
 
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
