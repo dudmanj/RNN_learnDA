@@ -16,9 +16,9 @@ pt_on = 1;
 % inits = repmat(ii([141 159 166 176 191 150]),1,6);
 
 stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18) 21*ones(1,6) 22*ones(1,6)];
-inits = repmat(ii([141 123 159 110 166 140]),1,14);
+inits = repmat(ii([141 123 159 110 166 132]),1,14);
 wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
-tau_vec = [repmat([ones(1,6) 1+rand(1,6) ones(1,6)],1,4) ones(1,12)];
+tau_vec = [repmat([ones(1,6) ones(1,6) ones(1,6)],1,4) ones(1,12)];
 clear run;
 
 parfor g = 1:numel(stim_list)
@@ -224,7 +224,7 @@ for g=1:numel(run)
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
         end
-        if scnt<7
+        if scnt<19
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
             % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
@@ -341,7 +341,7 @@ rew_win = 1600:2100;
 
 for g=1:numel(run)
 
-    if stim_list(g)==0 % & cnt<7 (depending upon whether one wants to consider individual differences also)
+    if stim_list(g)==0
             num_das = size(run(g).pred_da_move,1);
             for ggg=1:num_das
                 summary_data.analysis(3).da.c(ggg,:,cnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
@@ -362,7 +362,7 @@ end
 % 3.5 Plotting RPE comparisons
 
 % init_choice = randperm(18,9);
-init_choice = 1:18;
+init_choice = 1:12;
 
 for qq=1:8 % hundred trial bins
     
@@ -378,16 +378,19 @@ end
 figure(32); clf;
 subplot(121);
 errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
-axis([0 800 0 1.5]);
+axis([0 800 0 1]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 800],[0 0],'k-.'); hold on;
-errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
-errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
+% errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
+% errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
+errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2),'ro-','linewidth',3); hold on;
+errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2),'ko-','linewidth',3); hold on;
 xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
-yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
+% yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
+yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:800,xxx(1:8),yyy(1:8),'bo-','linewidth',3); hold on;
-axis([100 800 -0.5 5]); 
+axis([100 800 -1 4]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -395,7 +398,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 120:160;
+stable_trial_range = 100:120;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
@@ -414,7 +417,7 @@ xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
 axis([-1600 1400 -2e-3 15e-3]); box off;
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
-clear summary_data;
+% clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
@@ -422,12 +425,12 @@ t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
 s_scl = 1;
-m_scl = 0;
+m_scl = 1;
 cnt = 1;
 
 for g=1:numel(run)
 
-    if stim_list(g)==0
+    if stim_list(g)==0 & cnt<13
         
         % Get DA traces
         num_das = size(run(g).pred_da_move,1);
@@ -437,10 +440,10 @@ for g=1:numel(run)
             
         % Get Pr(lick) per same trials
         tcnt=1;
-        for gg=[1:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
 
-            summary_data.analysis(4).anticip(tcnt,cnt) = run(g).output.pass(gg).anticip;
-            summary_data.analysis(4).outs(tcnt,:,cnt) = run(g).output.pass(gg).chk.o(1610)-run(g).output.pass(gg).chk.o(1599);
+            summary_data.analysis(4).plck(tcnt,cnt) = run(g).output.pass(gg).plck;
+            summary_data.analysis(4).outs(tcnt,:,cnt) = run(g).output.pass(gg).chk.o;
             tcnt=tcnt+1;
         end
         
@@ -453,20 +456,33 @@ end
 %% 4.5 Plot figure panels for lick conditioned DA responses
 
 figure(41); clf;
+plot_style  = 'pop'
+summary_data.analysis(4).da_lickplus = zeros(3000,1);
+summary_data.analysis(4).da_lickminus = zeros(3000,1);
 
-range = 80:160;
+range = 40:160;
 
 for gggg=1:size(summary_data.analysis(4).da.c,3)
     
-    subplot(6,3,gggg);
-    lickplus = find(summary_data.analysis(4).anticip(range,gggg)>=5);
-    lickminus = find(summary_data.analysis(4).anticip(range,gggg)==0);
-%     plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg)),'color',[0 0.67 1]); hold on;
-%     plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg)),'color',[1 0 0]); hold on;
-    plot(0,mean(summary_data.analysis(4).outs(range(lickplus),:,gggg)),'o','color',[0 0.67 1]); hold on;
-    plot(0,mean(summary_data.analysis(4).outs(range(lickminus),:,gggg)),'o','color',[1 0 0]); hold on;
-    axis([-10 20 -0.5 1.5]);
-    title([num2str(gggg) ' ... ' num2str(numel(lickplus)/numel(lickminus))]);
+    lickplus = find(summary_data.analysis(4).plck(range,gggg)>0.8);
+    lickminus = find(summary_data.analysis(4).plck(range,gggg)<0.4);
+
+    switch plot_style
+        
+        case 'individ'
+            subplot(6,2,gggg);
+            plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg)),'color',[0 0.67 1]); hold on;
+            plot(-1599:1400,mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg)),'color',[1 0 0]); hold on;
+            title([num2str(gggg) ' ... ' num2str(numel(lickplus)/numel(lickminus))]);
+        case 'pop'
+            summary_data.analysis(4).da_lickplus = [summary_data.analysis(4).da_lickplus mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg),1)'];
+            summary_data.analysis(4).da_lickminus = [summary_data.analysis(4).da_lickminus mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg),1)'];
+            if gggg == size(summary_data.analysis(4).da.c,3)
+                shadedErrorBar(-1599:1400,mean(summary_data.analysis(4).da_lickplus,2,'omitnan'),std(summary_data.analysis(4).da_lickplus,[],2,'omitnan')./sqrt(gggg),{'color',[0 0.67 1]}); hold on;
+                shadedErrorBar(-1599:1400,mean(summary_data.analysis(4).da_lickminus,2,'omitnan'),std(summary_data.analysis(4).da_lickminus,[],2,'omitnan')./sqrt(gggg),{'color',[1 0 0]}); hold on;
+            end
+    end
+    box off; xlabel('Time from reward (ms)'); ylabel('Simulated DA resp. (au)');
     
 end
 
@@ -532,13 +548,239 @@ summary_data.analysis(5).bin_cntrl_LKperPE.g = [zeros(sum(summary_data.analysis(
 plot([-0.5 1.5],[0 0],'k--'); hold on;
 swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g,summary_data.analysis(5).bin_cntrl_LKperPE.dist,5,[0.5 0.5 0.5]);
 plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
-ylabel('Mean PE');
-
+ylabel('Mean PE'); axis([-0.5 1.5 -450 450]);
 
 %% 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
-% Also need to add in 21 and 22 conditions (critic only predictions)
+clear summary_data;
 
+% Also need to add in 21 and 22 conditions (critic only predictions)
+stim_map = [[57 181 74] ; [102 45 145 ] ; [158 31 99] ]/255;
+lk_kern = TNC_CreateGaussian(500,40,1000,1);
+jrcamp_tau = 500;
+t=1:3000;
+kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
+kern=kern/trapz(kern);
+s_scl = 1;
+m_scl = 1;
+
+cue_win = 100:600;
+
+SMcnt = 1;
+CTRLcnt = 1;
+SPcnt = 1;
+SPPcnt = 1;
+CritPcnt = 1;
+CritMcnt = 1;
+
+for g=1:numel(run)
+
+    switch stim_list(g)
+        
+        case -1
+            
+            num_das = size(run(g).pred_da_move,1);
+            for ggg=1:num_das
+                
+                % continuous plot
+                summary_data.analysis(6).stimMinus.da(ggg,:,SMcnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
+                
+                % quantify cue response
+                summary_data.analysis(6).stimMinus.c_cue_int(ggg,SMcnt) = trapz( summary_data.analysis(6).stimMinus.da(ggg,cue_win,SMcnt) );
+
+            end
+            
+            tcnt=1;
+            for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+                summary_data.analysis(6).stimMinus.lat(tcnt,SMcnt) = run(g).output.pass(gg).lat;
+                summary_data.analysis(6).stimMinus.ant(tcnt,SMcnt) = run(g).output.pass(gg).anticip;
+%                 summary_data.analysis(6).stimMinus.ant(tcnt,SMcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
+                
+                tmp_lk = zeros(1,3000);
+                tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
+                summary_data.analysis(6).stimMinus.lk(tcnt,:,SMcnt) = conv(tmp_lk,lk_kern,'same');
+                
+                tcnt=tcnt+1;
+                
+            end
+            SMcnt = SMcnt+1;
+
+        case 0
+
+            num_das = size(run(g).pred_da_move,1);
+            for ggg=1:num_das
+                
+                % continuous plot
+                summary_data.analysis(6).cntrl.da(ggg,:,CTRLcnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
+                
+                % quantify cue response
+                summary_data.analysis(6).cntrl.c_cue_int(ggg,CTRLcnt) = trapz( summary_data.analysis(6).cntrl.da(ggg,cue_win,CTRLcnt) );
+
+            end
+            
+            tcnt=1;
+            for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+                summary_data.analysis(6).cntrl.lat(tcnt,CTRLcnt) = run(g).output.pass(gg).lat;
+                summary_data.analysis(6).cntrl.ant(tcnt,CTRLcnt) = run(g).output.pass(gg).anticip;
+%                 summary_data.analysis(6).cntrl.ant(tcnt,CTRLcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
+                
+                tmp_lk = zeros(1,3000);
+                tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
+                summary_data.analysis(6).cntrl.lk(tcnt,:,CTRLcnt) = conv(tmp_lk,lk_kern,'same');
+                
+                tcnt=tcnt+1;
+                
+            end
+            CTRLcnt = CTRLcnt+1;
+            
+        case 1
+
+            num_das = size(run(g).pred_da_move,1);
+            for ggg=1:num_das
+                
+                % continuous plot
+                summary_data.analysis(6).stimPlus.da(ggg,:,SPcnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
+                
+                % quantify cue response
+                summary_data.analysis(6).stimPlus.c_cue_int(ggg,SPcnt) = trapz( summary_data.analysis(6).stimPlus.da(ggg,cue_win,SPcnt) );
+
+            end
+            
+            tcnt=1;
+            for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+                summary_data.analysis(6).stimPlus.lat(tcnt,SPcnt) = run(g).output.pass(gg).lat;
+                summary_data.analysis(6).stimPlus.ant(tcnt,SPcnt) = run(g).output.pass(gg).anticip;
+%                 summary_data.analysis(6).stimPlus.ant(tcnt,SPcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
+                
+                tmp_lk = zeros(1,3000);
+                tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
+                summary_data.analysis(6).stimPlus.lk(tcnt,:,SPcnt) = conv(tmp_lk,lk_kern,'same');
+                
+                tcnt=tcnt+1;
+                
+            end
+            SPcnt = SPcnt+1;
+            
+        case 20
+            num_das = size(run(g).pred_da_move,1);
+            for ggg=1:num_das
+                
+                % continuous plot
+                summary_data.analysis(6).stimPlusPlus.da(ggg,:,SPPcnt) = conv( s_scl*run(g).pred_da_sense(ggg,:) + m_scl*run(g).pred_da_move(ggg,:) , kern , 'same');
+                
+                % quantify cue response
+                summary_data.analysis(6).stimPlusPlus.c_cue_int(ggg,SPPcnt) = trapz( summary_data.analysis(6).stimPlusPlus.da(ggg,cue_win,SPPcnt) );
+
+            end
+            
+            tcnt=1;
+            for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+                summary_data.analysis(6).stimPlusPlus.lat(tcnt,SPPcnt) = run(g).output.pass(gg).lat;
+                summary_data.analysis(6).stimPlusPlus.ant(tcnt,SPPcnt) = run(g).output.pass(gg).anticip;
+%                 summary_data.analysis(6).stimPlusPlus.ant(tcnt,SPcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
+                
+                tmp_lk = zeros(1,3000);
+                tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
+                summary_data.analysis(6).stimPlusPlus.lk(tcnt,:,SPPcnt) = conv(tmp_lk,lk_kern,'same');
+                
+                tcnt=tcnt+1;
+                
+            end
+            SPPcnt = SPPcnt+1;
+
+        case 21
+            
+        case 22
+            
+    end
+
+
+end
+
+%% 6.5 Plot figure panels for comparisons
+
+inds2use = 1:12;
+
+for qq=1:9 % hundred trial bins
+    
+    if qq==1
+        curr_bin = 1:2;
+    else
+        curr_bin=[1:20] + (qq-2)*20;
+    end
+    this_bin_avg_sm = mean(summary_data.analysis(6).stimMinus.ant(curr_bin,inds2use),1);
+    this_bin_avg_sp = mean(summary_data.analysis(6).stimPlus.ant(curr_bin,inds2use),1);
+    this_bin_avg_spp = mean(summary_data.analysis(6).stimPlusPlus.ant(curr_bin,inds2use),1);
+    this_bin_avg_ctrl = mean(summary_data.analysis(6).cntrl.ant(curr_bin,inds2use),1);
+
+    summary_data.analysis(6).ant_sm.avg(qq) = mean(this_bin_avg_sm-this_bin_avg_ctrl);
+    summary_data.analysis(6).ant_sm.sem(qq) = std(this_bin_avg_sm-this_bin_avg_ctrl)./sqrt(numel(this_bin_avg_ctrl));
+    summary_data.analysis(6).ant_sp.avg(qq) = mean(this_bin_avg_sp-this_bin_avg_ctrl);
+    summary_data.analysis(6).ant_sp.sem(qq) = std(this_bin_avg_sp-this_bin_avg_ctrl)./sqrt(numel(this_bin_avg_ctrl));
+
+    summary_data.analysis(6).ant_ctrl.avg(qq) = mean(this_bin_avg_ctrl);
+    summary_data.analysis(6).ant_ctrl.sem(qq) = std(this_bin_avg_ctrl)./sqrt(numel(this_bin_avg_ctrl));
+    summary_data.analysis(6).ant_spp.avg(qq) = mean(this_bin_avg_spp);
+    summary_data.analysis(6).ant_spp.sem(qq) = std(this_bin_avg_spp)./sqrt(numel(this_bin_avg_spp));
+    
+    
+    this_bin_da_sm = mean(summary_data.analysis(6).stimMinus.c_cue_int(curr_bin,inds2use),1);
+    this_bin_da_sp = mean(summary_data.analysis(6).stimPlus.c_cue_int(curr_bin,inds2use),1);
+    this_bin_da_spp = mean(summary_data.analysis(6).stimPlusPlus.c_cue_int(curr_bin,inds2use),1);
+    this_bin_da_ctrl = mean(summary_data.analysis(6).cntrl.c_cue_int(curr_bin,inds2use),1);
+
+    summary_data.analysis(6).da_sm.avg(qq) = mean(this_bin_da_sm-this_bin_da_ctrl);
+    summary_data.analysis(6).da_sm.sem(qq) = std(this_bin_da_sm-this_bin_da_ctrl)./sqrt(numel(this_bin_da_ctrl));
+    summary_data.analysis(6).da_sp.avg(qq) = mean(this_bin_da_sp-this_bin_da_ctrl);
+    summary_data.analysis(6).da_sp.sem(qq) = std(this_bin_da_sp-this_bin_da_ctrl)./sqrt(numel(this_bin_da_ctrl));
+
+    summary_data.analysis(6).da_ctrl.avg(qq) = mean(this_bin_da_ctrl);
+    summary_data.analysis(6).da_ctrl.sem(qq) = std(this_bin_da_ctrl)./sqrt(numel(this_bin_da_ctrl));
+    summary_data.analysis(6).da_spp.avg(qq) = mean(this_bin_da_spp);
+    summary_data.analysis(6).da_spp.sem(qq) = std(this_bin_da_spp)./sqrt(numel(this_bin_da_spp));
+    
+end
+
+figure(61); clf;
+subplot(212);
+plot([0 800],[0 0],'k--'); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).ant_sm.avg,summary_data.analysis(6).ant_sm.sem,{'color',stim_map(1,:)}); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).ant_sp.avg,summary_data.analysis(6).ant_sp.sem,{'color',stim_map(2,:)}); hold on;
+axis([0 800 -4 4]);
+ylabel('cued licks - ctrl (Hz)');
+xlabel('trials'); box off;
+
+subplot(211);
+plot([0 800],[0 0],'k--'); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).da_sm.avg,summary_data.analysis(6).da_sm.sem,{'color',stim_map(1,:)}); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).da_sp.avg,summary_data.analysis(6).da_sp.sem,{'color',stim_map(2,:)}); hold on;
+axis([0 800 -1 1]);
+ylabel('cued DA - ctrl (au)');
+xlabel('trials'); box off;
+
+figure(62); clf;
+subplot(212);
+plot([0 800],[0 0],'k--'); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).ant_ctrl.avg,summary_data.analysis(6).ant_ctrl.sem,{'color',[0 0 0]}); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).ant_spp.avg,summary_data.analysis(6).ant_spp.sem,{'color',stim_map(3,:)}); hold on;
+axis([0 600 0 8]);
+ylabel('cued licks - ctrl (Hz)');
+xlabel('trials'); box off;
+
+subplot(211);
+plot([0 800],[0 0],'k--'); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).da_ctrl.avg,summary_data.analysis(6).da_ctrl.sem,{'color',[0 0 0]}); hold on;
+shadedErrorBar(0:100:800,summary_data.analysis(6).da_spp.avg,summary_data.analysis(6).da_spp.sem,{'color',stim_map(3,:)}); hold on;
+axis([0 600 -1 1]);
+ylabel('cued DA - ctrl (au)');
+xlabel('trials'); box off;
+
+
+%% DEPRECATED CODE
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 learn_ranges = [1 40 120; 20 60 160];
@@ -625,7 +867,7 @@ for g=[1 13 25 37]
     ylabel('DA resp. (a.u.)');  xlabel('Time'); legend({'1-300' '300-600'},'location','northwest');
 
 end
-%%
+%
 figure(31); clf;
 subplot(2,4,[1:3 5:7]);
 range = 20:20:140;
@@ -666,16 +908,6 @@ box off; xlabel('Time from stim (ms)'); ylabel('ACTR simulated DA response (a.u.
 %     run(1).output.pass(1).lat
 %     run(1).output.pass(1).lat_u
 %     run(1).output.pass(1).lat_o
-
-
-
-
-
-
-%% Analysis of performance over learning
-% performance error on lick- vs lick+ trials over learning
-
-
 
 %% Comparison across distinct run types
 stim_cat = unique(stim_list);
