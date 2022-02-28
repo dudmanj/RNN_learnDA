@@ -18,7 +18,7 @@ pt_on = 1;
 stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18) 21*ones(1,6) 22*ones(1,6)];
 inits = repmat(ii([141 123 159 110 166 132]),1,14);
 wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
-tau_vec = [repmat([ones(1,6) ones(1,6) ones(1,6)],1,4) ones(1,12)];
+tau_vec = [repmat([ones(1,6) ones(1,6)*1.5 ones(1,6)],1,4) ones(1,12)];
 clear run;
 
 parfor g = 1:numel(stim_list)
@@ -703,7 +703,7 @@ end
 
 %% 6.5 Plot figure panels for comparisons
 
-inds2use = 1:12;
+inds2use = 1:18;
 
 for qq=1:9 % hundred trial bins
     
@@ -767,7 +767,7 @@ subplot(212);
 plot([0 800],[0 0],'k--'); hold on;
 shadedErrorBar(0:100:800,summary_data.analysis(6).ant_ctrl.avg,summary_data.analysis(6).ant_ctrl.sem,{'color',[0 0 0]}); hold on;
 shadedErrorBar(0:100:800,summary_data.analysis(6).ant_spp.avg,summary_data.analysis(6).ant_spp.sem,{'color',stim_map(3,:)}); hold on;
-axis([0 600 0 6]);
+axis([0 800 0 6]);
 ylabel('cued licks - ctrl (Hz)');
 xlabel('trials'); box off;
 
@@ -775,7 +775,7 @@ subplot(211);
 plot([0 800],[0 0],'k--'); hold on;
 shadedErrorBar(0:100:800,summary_data.analysis(6).da_ctrl.avg,summary_data.analysis(6).da_ctrl.sem,{'color',[0 0 0]}); hold on;
 shadedErrorBar(0:100:800,summary_data.analysis(6).da_spp.avg,summary_data.analysis(6).da_spp.sem,{'color',stim_map(3,:)}); hold on;
-axis([0 600 -1 1]);
+axis([0 800 -1 1]);
 ylabel('cued DA - ctrl (au)');
 xlabel('trials'); box off;
 

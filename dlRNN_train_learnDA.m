@@ -73,7 +73,7 @@ eta_wIn     = 1./30 .* (2-tau_trans);     % best data match around 30-40 for tau
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 % tau_wIn = 0.28; % roughly 1/3 of membrane tau
-tau_wIn = 0.25; % roughly 1/3 of membrane tau
+tau_wIn = 0.5; % roughly 1/3 of membrane tau
 
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
 
@@ -116,13 +116,6 @@ critic.v = zeros(1,critic.steps);
 critic.alpha = 0.0005;
 critic.lambda = 1;
 critic.gamma = 1;
-
-% visualize training error:
-latency_cost = cost * (1-exp(-[60:1:1500]/500)');   
-emp_ant_cost = [-58.2970  528.5859  311.1233]; % empirical cost surface derived from simulations
-anticip_cost =  0.33*polyval(emp_ant_cost,0:0.1:9) + ... % component that is effort-like cost
-    cost * 0.36 * exp(-([0:0.1:9]-2)./1.2);    
-tmptmp = (latency_cost*ones(1,numel(anticip_cost)) + (ones(numel(latency_cost),1)*anticip_cost));
 
 % begin run through all input conditions
 target_list = randperm(length(target));
@@ -300,10 +293,10 @@ while pass <= 800 % stop when reward collection is very good
         switch stim
 
             case -1
-                if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 1;                    
+                if numel(find(outputs_t>1098 & outputs_t<1598))<1
+                    stim_bonus = 4;                    
                 else
-                    stim_bonus = 4;                  
+                    stim_bonus = 1;                  
                 end
                 % run critic value estimator
                 [critic] = dlRNN_criticEngine(critic,0);
