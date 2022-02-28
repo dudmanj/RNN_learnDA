@@ -362,7 +362,7 @@ end
 % 3.5 Plotting RPE comparisons
 
 % init_choice = randperm(18,9);
-init_choice = 1:12;
+init_choice = 1:18;
 
 for qq=1:8 % hundred trial bins
     
@@ -378,7 +378,7 @@ end
 figure(32); clf;
 subplot(121);
 errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
-axis([0 800 0 1]);
+axis([0 800 0 1.2]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 800],[0 0],'k-.'); hold on;
@@ -390,7 +390,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:800,xxx(1:8),yyy(1:8),'bo-','linewidth',3); hold on;
-axis([100 800 -1 4]); 
+axis([100 800 -1 5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -415,6 +415,24 @@ shadedErrorBar(-1599:1400,summary_data.analysis(3).DA_resp.u_avg,summary_data.an
 plot([-1599 1400],[0 0],'k-.'); hold on;
 xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
 axis([-1600 1400 -2e-3 15e-3]); box off;
+
+figure(33); clf;
+% plot average traces over example intervals:
+% 1-100, 200-300, 600-800
+ranges = [1:21 ; 40:60 ; 140:160];
+for egs_da=1:3
+
+    subplot(1,3,egs_da);
+    plot([0 0],[-5e-3 15e-3],'b-'); hold on;
+    plot([-1500 -1500],[-5e-3 15e-3],'k-'); hold on;
+    for jj=1:size(summary_data.analysis(3).da.c,3)
+        tmp_da = mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,jj),1);
+        plot(-1599:1400,tmp_da,'color',[0.5 0.5 0.5 0.5]); hold on;
+    end
+    plot(-1599:1400, mean( mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,:),1) ,3) ,'color',[0 0 0],'linewidth',2); hold on;
+    axis([-1600 1400 -5e-3 15e-3]); box off;
+end
+
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
 % clear summary_data;
