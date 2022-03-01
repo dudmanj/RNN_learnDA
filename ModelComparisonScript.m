@@ -238,7 +238,7 @@ for g=1:numel(run)
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5); hold on;
         else
-            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.5 0.5 0.5]); hold on;
+            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.85 0.85 0.85]); hold on;
         end
             box on; view(48,30);
             set(gca,'Color',[0.95 0.95 0.95]);
@@ -387,7 +387,7 @@ end
 
 figure(32); clf;
 subplot(121);
-errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
+errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(2:4,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
 axis([0 800 0 1.2]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
@@ -458,7 +458,7 @@ cnt = 1;
 
 for g=1:numel(run)
 
-    if stim_list(g)==0 & cnt<13
+    if stim_list(g)==0
         
         % Get DA traces
         num_das = size(run(g).pred_da_move,1);
@@ -488,7 +488,7 @@ plot_style  = 'pop'
 summary_data.analysis(4).da_lickplus = zeros(3000,1);
 summary_data.analysis(4).da_lickminus = zeros(3000,1);
 
-range = 40:160;
+range = 120:160;
 
 for gggg=1:size(summary_data.analysis(4).da.c,3)
     
