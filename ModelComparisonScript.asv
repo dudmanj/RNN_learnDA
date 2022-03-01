@@ -23,9 +23,9 @@ pt_on = 1;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
 stim_list = zeros(1,18);
-inits = repmat(ii([141 123 159 110 166 132 171 180 118]),1,2);
+inits = repmat(ii([141 123 159 110 166 132 169 180 118]),1,2);
 wIn_vec = [zeros(1,9) rand(1,9)*2];
-tau_vec = [ones(1,9)*2 ones(1,9)];
+tau_vec = [ones(1,6)*1.5 ones(1,6)],1,4) ones(1,12)];
 clear run;
 
 
@@ -54,7 +54,7 @@ parfor g = 1:numel(stim_list)
 
 end
 
-% save ~/'Dropbox (HHMI)'/run run stim_list inits
+save ~/'Dropbox (HHMI)'/run run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
 % 1. Plot Cost vs Ant vs React for all Cntrl model sims X
@@ -232,14 +232,11 @@ for g=1:numel(run)
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
         end
-        if scnt<=9
+        if scnt<19
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
             % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5); hold on;
-        else
-            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.5 0.5 0.5]); hold on;
-        end
             box on; view(48,30);
             set(gca,'Color',[0.95 0.95 0.95]);
             grid on;
@@ -248,6 +245,7 @@ for g=1:numel(run)
             zlabel('Cost');
             axis([-2 5.2 65 300 0 0.7]);
             drawnow;
+        end
 
 
         scnt = scnt + 1;
@@ -440,7 +438,7 @@ for egs_da=1:3
         plot(-1599:1400,tmp_da,'color',[0.5 0.5 0.5 0.5]); hold on;
     end
     plot(-1599:1400, mean( mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,:),1) ,3) ,'color',[0 0 0],'linewidth',2); hold on;
-    axis([-1600 1400 -1e-3 17e-3]); box off;
+    axis([-1600 1400 -5e-3 15e-3]); box off;
 end
 
 

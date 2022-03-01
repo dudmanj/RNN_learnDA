@@ -288,7 +288,7 @@ while pass <= 800 % stop when reward collection is very good
         
         error_r = (curr_val-pred_val_r);
 %         error_c = (error_r-pred_val_c);
-        error_c = (curr_val-pred_val_c)*0.5;
+        error_c = (curr_val-pred_val_c)*0.67;
         
         % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
         switch stim
