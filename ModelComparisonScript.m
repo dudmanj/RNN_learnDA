@@ -20,14 +20,28 @@ pt_on = 1;
 % wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
 % tau_vec = [repmat([ones(1,6) ones(1,6)*1.5 ones(1,6)],1,4) ones(1,12)];
 % clear run;
+% num_sims = 50;
+
+num_sims = 9;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
-stim_list = zeros(1,18);
-inits = repmat(ii([141 123 159 110 166 132 171 180 118]),1,2);
-wIn_vec = [zeros(1,9) rand(1,9)*2];
-tau_vec = [ones(1,9)*2 ones(1,9)];
-clear run;
+stim_list = zeros(1,num_sims);
+% inits = repmat(ii([141 123 159 110 166 132 171 180 118 100+randperm(100,9)]),1,2);
+% inits = ii(100+randperm(100,num_sims));
+% inits = ones(1,num_sims).*ii(141); % good
+% inits = ones(1,num_sims).*ii(123); % good
+% inits = ones(1,num_sims).*ii(110); % good
+% inits = ones(1,num_sims).*ii(171); % pretty good
+% inits = ones(1,num_sims).*ii(132); % good
+inits = ones(1,num_sims).*ii(180); % pretty good
 
+% wIn_vec = [rand(1,num_sims)+0.5];
+% tau_vec = [rand(1,num_sims)+1];
+wIn_vec = [0.6:0.1:1.4];
+tau_vec = [1.1:0.1:1.9];
+% wIn_vec = [zeros(1,num_sims)];
+% tau_vec = [ones(1,num_sims)];
+clear run;
 
 parfor g = 1:numel(stim_list)
 
@@ -55,6 +69,7 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run run stim_list inits
+% save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
 % 1. Plot Cost vs Ant vs React for all Cntrl model sims X
@@ -157,6 +172,7 @@ set(gca,'Color',[0.95 0.95 0.95]);
 box on; 
 
 %% 1. Plot Cost vs Ant vs React for all Cntrl model sims
+clear summary_data
 cmap = TNC_CreateRBColormap(6,'gp');
 cmap2 = repmat(cmap(1:6,:),3,1);
 fOff = 10 % for when rand wIn init is used
@@ -164,6 +180,7 @@ figure(1+fOff); clf;
 figure(2); clf;
 
 scnt = 1;
+[vals,inds] = sort(tau_vec);
 
 for g=1:numel(run)
 % for g=13
@@ -209,9 +226,9 @@ for g=1:numel(run)
         
         figure(2);
         total_sims = sum(stim_list==0);
-        subplot(total_sims,3,((scnt-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); %axis([0 161 0 1400]);
-        subplot(total_sims,3,((scnt-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]);
-        subplot(total_sims,3,((scnt-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]);
+        subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 161 0 500]); axis off;
+        subplot(total_sims,3,((find(inds==scnt)-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]); axis off;
+        subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]); axis off;
         
         
         figure(1+fOff);
@@ -232,14 +249,14 @@ for g=1:numel(run)
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
         end
-        if scnt<=9
+%         if scnt<=9
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
             % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5); hold on;
-        else
-            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.85 0.85 0.85]); hold on;
-        end
+%         else
+%             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.85 0.85 0.85]); hold on;
+%         end
             box on; view(48,30);
             set(gca,'Color',[0.95 0.95 0.95]);
             grid on;
@@ -254,7 +271,7 @@ for g=1:numel(run)
     end
 
 end
-legend(label_txt);
+% legend(label_txt);
 
 % figure(); plot3(summary_data.analysis(1).lat(1,:),summary_data.analysis(1).ant(1,:),summary_data.analysis(1).cost(1,:));
 
@@ -335,7 +352,7 @@ for g=1:numel(run)
 end
 
 %% 3. RPE predictions
-% clear summary_data;
+clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
@@ -372,7 +389,7 @@ end
 % 3.5 Plotting RPE comparisons
 
 % init_choice = randperm(18,9);
-init_choice = 1:18;
+init_choice = 1:9;
 
 for qq=1:8 % hundred trial bins
     
@@ -391,7 +408,7 @@ errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(2:4,:),
 axis([0 800 0 1.2]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
-plot([0 800],[0 0],'k-.'); hold on;
+plot([0 810],[0 0],'k-.'); hold on;
 % errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
 % errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
 errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2),'ro-','linewidth',3); hold on;
@@ -399,8 +416,8 @@ errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summ
 xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
-errorbar(100:100:800,xxx(1:8),yyy(1:8),'bo-','linewidth',3); hold on;
-axis([100 800 -1 5]); 
+errorbar(400:100:800,xxx(4:8),yyy(4:8),'bo-','linewidth',3); hold on;
+axis([100 810 -0.6 5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -442,7 +459,6 @@ for egs_da=1:3
     plot(-1599:1400, mean( mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,:),1) ,3) ,'color',[0 0 0],'linewidth',2); hold on;
     axis([-1600 1400 -1e-3 17e-3]); box off;
 end
-
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
 % clear summary_data;
@@ -578,7 +594,46 @@ swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g,summary_data.analysis(5)
 plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
 ylabel('Mean PE'); axis([-0.5 1.5 -450 450]);
 
-%% 6. DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
+%% 6. Simulations for stim experiments
+global pt_on;
+pt_on = 1;
+
+% TUNING UP THE CUE AND REWARD LEARNING RATES
+stim_list = [ -1*ones(1,9) zeros(1,9) ones(1,9) 20*ones(1,9) 21*ones(1,9) 22*ones(1,9) ];
+inits = repmat(ii([141 123 159 110 166 132 171 180 118]),1,6);
+wIn_vec = repmat(zeros(1,9),1,6);
+tau_vec = repmat(ones(1,9),1,6);
+clear run;
+
+
+parfor g = 1:numel(stim_list)
+
+    net_init = gens.dets(inits(g)).net % diverse initial states
+                
+%     net_init.wIn(net.oUind,:) = [0 0];
+    net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
+    tau_trans = tau_vec(g); % now controls eta_wIn learning rate
+    filt_scale = 50; % plant scale factor currently
+
+    % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
+    stim = stim_list(g);
+    [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+
+    run(g).output = output;
+    run(g).net = net_out;
+    run(g).pred_da_sense = pred_da_sense;
+    run(g).pred_da_move = pred_da_move;
+    run(g).pred_da_sense_u = pred_da_sense_u;
+    run(g).pred_da_move_u = pred_da_move_u;
+    run(g).pred_da_sense_o = pred_da_sense_o;
+    run(g).pred_da_move_o = pred_da_move_o;
+    disp(['Completed run: ' num2str(g)]);
+
+end
+
+% save ~/'Dropbox (HHMI)'/run-stim run stim_list inits
+
+%% 6.5 DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
 clear summary_data;
 
