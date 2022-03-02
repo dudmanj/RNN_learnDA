@@ -70,7 +70,7 @@ alpha_X     = 0.33;
 eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
 % eta_wIn     = 1./30 ./ tau_trans;     % best data match around 30-40 for tau_trans
-eta_wIn     = 1./0 ./ tau_trans;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./60 ./ tau_trans;     % best data match around 30-40 for tau_trans
 % eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 % tau_wIn = 0.28; % roughly 1/3 of membrane tau
@@ -283,7 +283,7 @@ while pass <= 800 % stop when reward collection is very good
         PE = R_curr(curr_cond) - R_bar(curr_cond);
 
         % current reward value normalized over {0,1} like derivative
-        curr_val = 1-exp(-deltaRew/500);
+        curr_val = 1- (1-exp(-deltaRew/500));
         % pred_val_r = eta_DA_mult + stim_bonus; % predicted value at reward
         pred_val_r = outputs(1599); % predicted value at reward
         pred_val_c = outputs(110); % predicted value at cue

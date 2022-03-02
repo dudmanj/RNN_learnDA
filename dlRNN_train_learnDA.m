@@ -1,4 +1,4 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale)
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale,trans_sat)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 global monitor;
 global pt_on;
@@ -283,7 +283,7 @@ while pass <= 800 % stop when reward collection is very good
         PE = R_curr(curr_cond) - R_bar(curr_cond);
 
         % current reward value normalized over {0,1} like derivative
-        curr_val = 1-exp(-deltaRew/500);
+        curr_val = 1- (1-exp(-deltaRew/500));
         % pred_val_r = eta_DA_mult + stim_bonus; % predicted value at reward
         pred_val_r = outputs(1599); % predicted value at reward
         pred_val_c = outputs(110); % predicted value at cue
@@ -381,17 +381,12 @@ while pass <= 800 % stop when reward collection is very good
 
         % ACTR formulation
 %         delta_J = (-eta_J .* error_r .* stim_bonus .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) );
-
         % ACTR-C formulation
 %         delta_J = (-eta_J .* error_r .* stim_bonus .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (eta_J * e * critic.rpe_rew);
-
         % ACTR-C formulation
 %         delta_J = (-eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (eta_J * e * critic.rpe_rew);
-
         % ACTR-C formulation
 %         delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (eta_J * e * critic.rpe_rew);
-
-        % SHOULD I USE THE ERROR IDEA RATHER THAN RUNNING REWARD AVERAGE?
 %         delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* error_r ) + (eta_J * e * critic.rpe_rew);
         
         % Prevent too large changes in weights
@@ -406,7 +401,7 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + (10-net_out.wIn(net.oUind,2)).*( eta_wIn .* error_r .* stim_bonus .* eta_DA_mult );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + (trans_sat-net_out.wIn(net.oUind,2)).*( eta_wIn .* error_r .* stim_bonus .* eta_DA_mult );
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + eta_wIn*critic.rpe_rew;
         % ACTR-C formulation
@@ -414,21 +409,21 @@ while pass <= 800 % stop when reward collection is very good
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + (eta_wIn/wIn_scaling)*critic.rpe_rew;
         
-        if net_out.wIn(net.oUind,2)>10
-            net_out.wIn(net.oUind,2)=10;
+        if net_out.wIn(net.oUind,2)>trans_sat
+            net_out.wIn(net.oUind,2)=trans_sat;
         elseif net_out.wIn(net.oUind,2)<0
             net_out.wIn(net.oUind,2)=0;
         end
         
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + (10-net_out.wIn(net.oUind,1)) .* ( eta_wIn .* error_c .* stim_bonus .* eta_DA_mult  ) .* ( net_out.wIn(net.oUind,2)>2.5 );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + (trans_sat-net_out.wIn(net.oUind,1)) .* ( eta_wIn .* error_c .* stim_bonus .* eta_DA_mult  ) .* ( net_out.wIn(net.oUind,2)>2.5 );        
         % ACTR formulation
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + (eta_wIn/wIn_scaling)*critic.rpe_cue;        
         % ACTR-C formulation
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + eta_wIn*critic.rpe_cue;
 
-        if net_out.wIn(net.oUind,1)>10
-            net_out.wIn(net.oUind,1)=10;
+        if net_out.wIn(net.oUind,1)>trans_sat
+            net_out.wIn(net.oUind,1)=trans_sat;
         elseif net_out.wIn(net.oUind,1)<0
             net_out.wIn(net.oUind,1)=0;
         end

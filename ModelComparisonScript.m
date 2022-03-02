@@ -44,6 +44,7 @@ wIn_vec = repmat([rand(1,6).*2],1,6);
 % tau_vec = [1.1:0.1:1.9];
 tmp = repmat([1:0.2:2],6,1);
 tau_vec = tmp(1:numel(tmp));
+sat_vec = repmat(randperm(6)+4,1,6);
 % wIn_vec = [zeros(1,num_sims)];
 % tau_vec = [ones(1,num_sims)];
 clear run;
@@ -56,10 +57,11 @@ parfor g = 1:numel(stim_list)
     net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
     tau_trans = tau_vec(g); % now controls eta_wIn learning rate
     filt_scale = 50; % plant scale factor currently
+    trans_sat = sat_vec(g);
 
     % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
     stim = stim_list(g);
-    [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+    [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale,trans_sat);
 
     run(g).output = output;
     run(g).net = net_out;
