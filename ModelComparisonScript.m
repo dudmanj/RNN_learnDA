@@ -22,23 +22,28 @@ pt_on = 1;
 % clear run;
 % num_sims = 50;
 
-num_sims = 9;
+num_sims = 36;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
 stim_list = zeros(1,num_sims);
 % inits = repmat(ii([141 123 159 110 166 132 171 180 118 100+randperm(100,9)]),1,2);
 % inits = ii(100+randperm(100,num_sims));
+
 % inits = ones(1,num_sims).*ii(141); % good
 % inits = ones(1,num_sims).*ii(123); % good
 % inits = ones(1,num_sims).*ii(110); % good
 % inits = ones(1,num_sims).*ii(171); % pretty good
 % inits = ones(1,num_sims).*ii(132); % good
-inits = ones(1,num_sims).*ii(180); % pretty good
+% inits = ones(1,num_sims).*ii(180); % pretty good
+
+inits = repmat(ii([141 123 110 132 171 180]),1,6);
 
 % wIn_vec = [rand(1,num_sims)+0.5];
 % tau_vec = [rand(1,num_sims)+1];
-wIn_vec = [0.6:0.1:1.4];
-tau_vec = [1.1:0.1:1.9];
+wIn_vec = repmat([rand(1,6).*2],1,6);
+% tau_vec = [1.1:0.1:1.9];
+tmp = repmat([1:0.2:2],6,1);
+tau_vec = tmp(1:numel(tmp));
 % wIn_vec = [zeros(1,num_sims)];
 % tau_vec = [ones(1,num_sims)];
 clear run;
@@ -68,7 +73,8 @@ parfor g = 1:numel(stim_list)
 
 end
 
-% save ~/'Dropbox (HHMI)'/run run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
+save ~/'Dropbox (HHMI)'/run-ctrl-noC run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -180,7 +186,8 @@ figure(1+fOff); clf;
 figure(2); clf;
 
 scnt = 1;
-[vals,inds] = sort(tau_vec);
+% [vals,inds] = sort(tau_vec);
+inds = 1:num_sims;
 
 for g=1:numel(run)
 % for g=13
@@ -389,11 +396,11 @@ end
 % 3.5 Plotting RPE comparisons
 
 % init_choice = randperm(18,9);
-init_choice = 1:9;
+init_choice = 1:numel(run);
 
-for qq=1:8 % hundred trial bins
+for qq=1:7 % hundred trial bins
     
-    curr_bin=[1:20] + (qq-1)*20;
+    curr_bin=[-10:10] + (qq*20);
 
     summary_data.analysis(3).DA_resp.c_cue_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_cue_int(curr_bin,init_choice),1 );
     summary_data.analysis(3).DA_resp.c_rew_bin(qq,:) = mean( summary_data.analysis(3).DA_resp.c_rew_int(curr_bin,init_choice),1 );
@@ -404,20 +411,20 @@ end
 
 figure(32); clf;
 subplot(121);
-errorbar(0:100:800,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(2:4,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(1:3,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(18)],'ro-','linewidth',3);
-axis([0 800 0 1.2]);
+errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
+axis([0 800 0 5]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 810],[0 0],'k-.'); hold on;
 % errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
 % errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
-errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2),'ro-','linewidth',3); hold on;
-errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2),'ko-','linewidth',3); hold on;
+errorbar(100:100:700,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2),'ro-','linewidth',3); hold on;
+errorbar(100:100:700,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2),'ko-','linewidth',3); hold on;
 xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
-errorbar(400:100:800,xxx(4:8),yyy(4:8),'bo-','linewidth',3); hold on;
-axis([100 810 -0.6 5]); 
+errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
+axis([0 810 -0.6 5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -425,7 +432,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 100:120;
+stable_trial_range = 140:160;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 

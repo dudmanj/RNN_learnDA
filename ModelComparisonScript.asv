@@ -22,21 +22,28 @@ pt_on = 1;
 % clear run;
 % num_sims = 50;
 
-num_sims = 9;
+num_sims = 36;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
 stim_list = zeros(1,num_sims);
 % inits = repmat(ii([141 123 159 110 166 132 171 180 118 100+randperm(100,9)]),1,2);
 % inits = ii(100+randperm(100,num_sims));
+
 % inits = ones(1,num_sims).*ii(141); % good
 % inits = ones(1,num_sims).*ii(123); % good
 % inits = ones(1,num_sims).*ii(110); % good
 % inits = ones(1,num_sims).*ii(171); % pretty good
 % inits = ones(1,num_sims).*ii(132); % good
-inits = ones(1,num_sims).*ii(180); % good
+% inits = ones(1,num_sims).*ii(180); % pretty good
 
-wIn_vec = [rand(1,num_sims)+0.5];
-tau_vec = [rand(1,num_sims)+1];
+inits = repmat(ii([141 123 110 132 171 180]),1,6);
+
+% wIn_vec = [rand(1,num_sims)+0.5];
+% tau_vec = [rand(1,num_sims)+1];
+wIn_vec = repmat([rand(1,6).*2],1,6);
+% tau_vec = [1.1:0.1:1.9];
+tmp = repmat([1:0.2:1.6],6,1);
+tau_vec = tmp(1:numel(tmp));
 % wIn_vec = [zeros(1,num_sims)];
 % tau_vec = [ones(1,num_sims)];
 clear run;
@@ -66,7 +73,8 @@ parfor g = 1:numel(stim_list)
 
 end
 
-% save ~/'Dropbox (HHMI)'/run run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
+save ~/'Dropbox (HHMI)'/run-ctrl-noC run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -178,7 +186,8 @@ figure(1+fOff); clf;
 figure(2); clf;
 
 scnt = 1;
-[vals,inds] = sort(tau_vec);
+% [vals,inds] = sort(tau_vec);
+inds = 1:num_sims;
 
 for g=1:numel(run)
 % for g=13
@@ -387,7 +396,7 @@ end
 % 3.5 Plotting RPE comparisons
 
 % init_choice = randperm(18,9);
-init_choice = 1:9;
+init_choice = 1:numel(run);
 
 for qq=1:8 % hundred trial bins
     
@@ -423,7 +432,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 100:120;
+stable_trial_range = 140:160;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
