@@ -1,8 +1,7 @@
 
 load ~/'Dropbox (HHMI)'/matlab.mat
-load ~/'Dropbox (HHMI)'/run.mat
+% load ~/'Dropbox (HHMI)'/run.mat
 % load ~/'Dropbox (HHMI)'/cued-da-run.mat
-
 
 %% LearnDA simulations scripts for comparing Cntrl (various inits) w/ StimLick+ StimLick- Stim+Lick+
 global pt_on;
