@@ -220,39 +220,11 @@ while pass <= 800 % stop when reward collection is very good
         anticip_lck = zeros(1,error_reps);
         lat_lck = zeros(1,error_reps);
 
-%         for qq=1:error_reps
-%             
-% 
-%             if pt_on
-%                 % pass combined anticipatory and reactive output through the transfer function
-%                 net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2) + curr_input(1,:)*net_out.wIn(net.oUind,1);
-%                 outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
-%             else
-%                 % pass output through the transfer function
-%                 outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
-%             end
-% 
-%             % Calculate error as a function something like:
-                rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
-                if numel(rewTime)==0
-                    rewTime = 2999;
-                end
-%             tmp = find(outputs_t>rewTime,1);
-%             if numel(tmp)==1
-%                 deltaRew = (outputs_t(tmp)-rewTime);
-%             else
-%                 deltaRew = size(curr_input,2)-rewTime;
-%             end
-%             
-%             err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
-%             
-%             err_vector(qq) = err;
-%             err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var_set);
-%             err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
-%             anticip_lck(qq) = numel(find(outputs_t<rewTime));
-%             lat_lck(qq) = deltaRew;
-% 
-%         end
+        % Calculate error as a function something like:
+        rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
+        if numel(rewTime)==0
+            rewTime = 2999;
+        end
 
         % Save predicted error
         err                                     = mean(err_vector);
@@ -303,18 +275,9 @@ while pass <= 800 % stop when reward collection is very good
                 else
                     stim_bonus = 4;                  
                 end
-                % run critic value estimator
-                critic.r(critic.rewTime) = 0;
-                [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
-
                 
             case 0
                 stim_bonus = 1;                    
-                % run critic value estimator
-                critic.r(critic.rewTime) = 0;
-                [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
@@ -322,32 +285,18 @@ while pass <= 800 % stop when reward collection is very good
                 else
                     stim_bonus = 1;                    
                 end
-                % run critic value estimator
-                critic.r(critic.rewTime) = 0;
-                [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
                 
             case 20
-                    stim_bonus = 4;
-                    critic.r(critic.rewTime) = 1;
-                    % run critic value estimator
-                    [critic] = dlRNN_criticEngine(critic,stim);
-                    wIn_scaling = 1;
+                stim_bonus = 4;
+                error_c = 1;
                 
             otherwise
                 stim_bonus = stim;
-                % run critic value estimator
-                critic.r(critic.rewTime) = 0;
-                [critic] = dlRNN_criticEngine(critic,0);
-                    wIn_scaling = 10;
                     
         end
 
-        % ACTR-C formulation
-        delta_J = (-eta_J .* eta_DA_mult .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (eta_J * e * critic.rpe_rew);
-
-        % ACTR-C formulation
-%         delta_J = (-eta_J .* (stim_bonus .* eta_DA_mult) .* e .* (R_curr(curr_cond) - R_bar(curr_cond)) ) + (eta_J * e * critic.rpe_rew);
+        % ACTR formulation
+        delta_J = -eta_J .* eta_DA_mult .* stim_bonus .* e .* PE;
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -361,7 +310,7 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR-C formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + eta_wIn*error_r*stim_bonus + (eta_wIn/wIn_scaling)*critic.rpe_rew;
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + (trans_sat-net_out.wIn(net.oUind,2)).*( eta_wIn .* error_r .* stim_bonus .* eta_DA_mult );
         
         if net_out.wIn(net.oUind,2)>10
             net_out.wIn(net.oUind,2)=10;
@@ -370,7 +319,7 @@ while pass <= 800 % stop when reward collection is very good
         end
         
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + eta_wIn*error_c*stim_bonus + (eta_wIn/wIn_scaling)*critic.rpe_cue;        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + (trans_sat-net_out.wIn(net.oUind,1)) .* ( eta_wIn .* error_c .* stim_bonus .* eta_DA_mult  );        
 
         if net_out.wIn(net.oUind,1)>10
             net_out.wIn(net.oUind,1)=10;
