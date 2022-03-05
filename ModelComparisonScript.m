@@ -45,13 +45,16 @@ pt_on = 1;
 % wIn_vec = [zeros(1,num_sims)];
 % tau_vec = [ones(1,num_sims)];
 
-num_sims = 6;
+num_sims = 36;
 stim_list = zeros(1,num_sims);
 
-inits = [141 123 110 132 171 180];
-wIn_vec = rand(1,6).*2;
-tau_vec = ones(1,6);
-sat_vec = randperm(6)+4;
+inits = repmat([180 123 110 132 171 141],6);
+wIn_vec = rand(1,num_sims);
+% tmp = repmat([1.5 2 2.5],6,1);
+tmp = rand(1,num_sims)+1.5;
+tau_vec = tmp(1:numel(tmp));
+
+sat_vec = 3*rand(1,num_sims)+7;
 % sat_vec = ones(1,6)*10;
 clear run;
 
@@ -82,7 +85,7 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-PEintAll run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -125,7 +128,7 @@ hold on; plot(trans_vec,react_sm);
 %% 0.5 Compute full error surface
 s_map = TNC_CreateRBColormap(1000,'cpb');
 trans_vec = -0.5:0.5:11;
-sust_vec = -0.35:0.05:1;
+sust_vec = -0.25:0.05:1;
 reps=1:100;
 lat = zeros(numel(sust_vec),numel(reps));
 lat_mat = zeros(numel(sust_vec),numel(trans_vec));
@@ -189,8 +192,9 @@ box on;
 clear summary_data
 cmap = TNC_CreateRBColormap(6,'gp');
 cmap2 = repmat(cmap(1:6,:),3,1);
-fOff = 10 % for when rand wIn init is used
+fOff = 10; % for when rand wIn init is used
 figure(1+fOff); clf;
+figure(2+fOff); clf;
 figure(2); clf;
 
 scnt = 1;
@@ -198,7 +202,6 @@ scnt = 1;
 inds = 1:num_sims;
 
 for g=1:numel(run)
-% for g=13
 
     if stim_list(g)==0 % Only use Cntrl simulations
 
@@ -213,7 +216,8 @@ for g=1:numel(run)
             end
             summary_data.analysis(1).cost(scnt,cnt) = 1-exp(-summary_data.analysis(1).lat(scnt,cnt)/500);
             summary_data.analysis(1).rct(scnt,cnt) = react_model(run(g).output.pass(gg).chk.npi(1605))+50;
-            summary_data.analysis(1).ant(scnt,cnt) = numel(find(unique(run(g).output.pass(gg).chk.v)>600 & unique(run(g).output.pass(gg).chk.v)<1600));
+            summary_data.analysis(1).ant(scnt,cnt) = run(g).output.pass(gg).anticip;
+%             summary_data.analysis(1).ant(scnt,cnt) = numel(find(unique(run(g).output.pass(gg).chk.v)>600 & unique(run(g).output.pass(gg).chk.v)<1600));
 
             label_txt{scnt} = [num2str(inits(g)) '-' num2str(tau_vec(g),2) '-' num2str(wIn_vec(g),1)];
 
@@ -231,7 +235,7 @@ for g=1:numel(run)
         
         % Fit an exponential to the data
         trial_rng = 1:161;
-        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.5 -8 -0.5],'Upper',[0 0.1 0 0.1]);    
+        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.5 -8 -0.5],'Upper',[4 0.1 4 0.1]);    
         transient_model = fit( trial_rng' , summary_data.analysis(1).rct(scnt,:)'-trans_off,'exp2','Lower',[50 -0.05 50 -0.5],'Upper',[500 0 500 0]);
         latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1400 0 1400 0]);
         
@@ -246,6 +250,14 @@ for g=1:numel(run)
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]); axis off;
         
         
+        figure(2+fOff);
+        plot3(sustained_sm,transient_sm,log10(latency_sm),'k-','linewidth',1.5); hold on;
+            view(48,30);
+            % set(gca,'YDir','reverse');
+            set(gca,'Color',[0.95 0.95 0.95]);
+            box on; 
+            axis([-2 8 50 375 1.75 3.25]);
+
         figure(1+fOff);
         if scnt==1    
             set(0,'DefaultFigureRenderer','painters');
@@ -615,23 +627,23 @@ summary_data.analysis(5).bin_cntrl_LKperPE.tcnt = [summary_data.analysis(5).all_
 % plot([1.2 1.8],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'k-','linewidth',4); box off;
 subplot(121);
 plot([-0.5 1.5],[0 0],'k--'); hold on;
-swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.dist(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5]);
+swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.dist(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5],'MarkerEdgeAlpha',0.2);
 plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
-ylabel('Mean PE'); axis([-0.5 1.5 -450 450]);
+ylabel('Mean PE'); axis([-0.5 1.5 -1 1]);
 subplot(122);
 plot([-0.5 1.5],[0 0],'k--'); hold on;
-swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5]);
+swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5],'MarkerEdgeAlpha',0.2);
 plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avgI,'ko-','linewidth',4); box off;
 ylabel('Mean PEI'); axis([-0.5 1.5 -1 2]);
 
 figure(52); clf; subplot(121);
-plot([-600 800],[0 0],'k-'); hold on;
+plot([-1 1],[0 0],'k-'); hold on;
 plot([0 0],[-2 2],'k-');
-scatter(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.distI,5);
+scatter(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.distI,10,'filled','MarkerFaceAlpha',0.25);
 ylabel('PE internal'); xlabel('PE veridical');
 subplot(122);
 plot([0 800],[0 0],'k-'); hold on;
-scatter(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt,summary_data.analysis(5).bin_cntrl_LKperPE.distI,10,summary_data.analysis(5).bin_cntrl_LKperPE.g,'filled'); colormap([pe_map(end-1,:);pe_map(2,:)]);
+scatter(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt,summary_data.analysis(5).bin_cntrl_LKperPE.distI,10,summary_data.analysis(5).bin_cntrl_LKperPE.g,'filled','MarkerFaceAlpha',0.25); colormap([pe_map(end-1,:);pe_map(2,:)]);
 ylabel('PE'); xlabel('trials');
 
 [bPE_lminus] = TNC_BinAndMean(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt(summary_data.analysis(5).bin_cntrl_LKperPE.g==0),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.g==0)<0,8);

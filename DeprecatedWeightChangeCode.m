@@ -1,7 +1,7 @@
 
 
-DA_trans = cumsum(TNC_CreateGaussian(650,75,1000,1));
-figure(); plot(DA_trans);
+DA_trans = cumsum(TNC_CreateGaussian(700,200,1000,1)).*3;
+figure(4); plot(DA_trans); hold on;
 
 %%
 

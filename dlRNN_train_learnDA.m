@@ -46,13 +46,15 @@ pred_da_move_u = [];
 pred_da_move_o = [];
 pred_da_sense_u = [];
 pred_da_sense_o = [];
-DA_trans = cumsum(TNC_CreateGaussian(650,75,1000,1));
+% DA_trans = cumsum(TNC_CreateGaussian(500,150,1000,1));
+DA_trans = cumsum(TNC_CreateGaussian(700,200,1000,1));
 
 clear plot_stats;
 pass        = 1;
 stats_cnt   = 1;
 [cm]        = TNC_CreateRBColormap(1024,'rb');
-cost        = 500;
+% cost        = 500;
+cost        = 1;
 w_var       = 0.25;             % relative weighting of cost of variance in output unit activity
 w_var_set   = 0.25;
 [lck_gauss] = TNC_CreateGaussian(500,25,1000,1);
@@ -65,19 +67,14 @@ max_delta_J = 0.01;             % prevent very large weight changes (in practice
 dt          = 1;
 tau         = 30;
 dt_div_tau  = dt/tau;
-% alpha_R     = 0.9;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
 % eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
-eta_J       = 1e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
-% eta_wIn     = 1./tau_trans;     % best data match around 25 for tau_trans
+eta_J       = 2.5e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./30 ./ tau_trans;     % best data match around 30-40 for tau_trans
-eta_wIn     = 1./30 ./ tau_trans;     % best data match around 30-40 for tau_trans
-% eta_wIn     = 1./100 .* tau_trans;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./70 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
-% tau_wIn = 0.28; % roughly 1/3 of membrane tau
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
-
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
 
 net_run.eta_J = eta_J;
@@ -97,28 +94,6 @@ net_out = net;
 orig_J = net_out.J;
 
 running_bar = []; running_err = []; running_ant = [];  running_lat = [];
-
-% Initialize the critic
-curr_input = input{1};
-critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
-critic.cueTime = 1;
-critic.steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
-critic.rpe_rew = 0;
-critic.rpe_cue = 0;
-critic.w = zeros(critic.steps,1);
-critic.x = zeros(numel(critic.w),critic.steps);
-            
-for p=critic.cueTime+1:critic.steps
-    critic.x(p,p) = 1;
-end
-
-critic.r = zeros(1,critic.steps);
-critic.d = zeros(1,critic.steps);
-critic.r(critic.rewTime) = 1;
-critic.v = zeros(1,critic.steps);
-critic.alpha = 0.0005;
-critic.lambda = 1;
-critic.gamma = 1;
 
 % begin run through all input conditions
 target_list = randperm(length(target));
@@ -162,6 +137,7 @@ for cond = 1:length(target_list)
             
             lat_lck(qq) = deltaRew;
             anticip_lck(qq) = numel(find(outputs_t<rewTime));
+
         end
 
             running_ant = [running_ant , mean(anticip_lck)];
@@ -170,19 +146,19 @@ for cond = 1:length(target_list)
 
             
     % Save predicted error
-    err                             = mean(err_vector);
-    R_curr(curr_cond)       = mean(err_vector);
-    R_bar(curr_cond)        = R_curr(curr_cond);        
+    err                                     = mean(err_vector);
+    R_curr(curr_cond)                       = mean(err_vector);
+    R_bar(curr_cond)                        = R_curr(curr_cond);        
 
     % Compile conditions
-    net_run.cond(curr_cond).out         = outputs;
-    net_run.cond(curr_cond).e           = e;
-    net_run.cond(curr_cond).hr          = hidden_r;
-    net_run.cond(curr_cond).hx                = hidden_x;
+    net_run.cond(curr_cond).out             = outputs;
+    net_run.cond(curr_cond).e               = e;
+    net_run.cond(curr_cond).hr              = hidden_r;
+    net_run.cond(curr_cond).hx              = hidden_x;
     net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
-    net_run.pass(pass).chk(curr_cond).o   = outputs;
-    net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
-    net_run.pass(pass).lat(curr_cond)                = median(lat_lck);
+    net_run.pass(pass).chk(curr_cond).o     = outputs;
+    net_run.pass(pass).anticip(curr_cond)   = mean(anticip_lck);
+    net_run.pass(pass).lat(curr_cond)       = median(lat_lck);
     net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime) - outputs(rewTime-1);    
     
     figure(1); 
@@ -280,23 +256,29 @@ while pass <= 800 % stop when reward collection is very good
 
         % Using ~DA activity to compute updates (multiply through by derivative of policy during reward delivery component)
 
-        eta_DA_mult = outputs(1610) - outputs(1599);
-%----------- NOTE: eta_DA_mult should really be a nonlinear function of derivative
-        PE = R_curr(curr_cond) - R_bar(curr_cond);
-        curr_val = 1- (1-exp(-deltaRew/500));
+        dpolicy = round(1000.*(outputs(1610) - outputs(1599)));        
+        if dpolicy<=1
+            dpolicy=1;
+        end
+        if dpolicy>=1000
+            dpolicy=1000;
+        end
+
+        eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
 
         % current reward value normalized over {0,1} like derivative
-        pred_val_r = mean(outputs(1590:1599)); % predicted value at reward
+        curr_val = 1- (1-exp(-deltaRew/500));
+        curr_val_c = curr_val*0.5;
+        
+        pred_val_r = outputs(1599); % predicted value at reward
         pred_val_c = outputs(110); % predicted value at cue
         
+%         PE = error_r;
+        PE = R_curr(curr_cond)-R_bar(curr_cond);
         error_r = curr_val-pred_val_r;
-%         error_c = (error_r-pred_val_c);
-%         error_c = curr_val-pred_val_c;
-%         error_c = pred_val_r;
-        error_c = (error_r*0.1);
+        error_c = 0.1*curr_val;
 
         net_run.pass(pass).peI   = error_r;
-        PE = error_r;
 
         
         % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
@@ -364,7 +346,7 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + (trans_sat-net_out.wIn(net.oUind,2)).*( eta_wIn .* error_r .* stim_bonus .* eta_DA_mult );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + (trans_sat-net_out.wIn(net.oUind,2)) .* ( eta_wIn .* error_r .* stim_bonus .* eta_DA_mult );
         
         if net_out.wIn(net.oUind,2)>trans_sat
             net_out.wIn(net.oUind,2)=trans_sat;
@@ -372,11 +354,12 @@ while pass <= 800 % stop when reward collection is very good
             net_out.wIn(net.oUind,2)=0;
         end
         
+        trans_sat_c = trans_sat/2;
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + (trans_sat-net_out.wIn(net.oUind,1)) .* ( eta_wIn .* error_c .* stim_bonus .* eta_DA_mult  );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + (trans_sat_c-net_out.wIn(net.oUind,1)) .* ( eta_wIn .* error_c .* stim_bonus .* eta_DA_mult  );        
 
-        if net_out.wIn(net.oUind,1)>trans_sat
-            net_out.wIn(net.oUind,1)=trans_sat;
+        if net_out.wIn(net.oUind,1)>trans_sat_c
+            net_out.wIn(net.oUind,1)=trans_sat_c;
         elseif net_out.wIn(net.oUind,1)<0
             net_out.wIn(net.oUind,1)=0;
         end
@@ -565,13 +548,13 @@ while pass <= 800 % stop when reward collection is very good
 
         sensory_resp = zeros(1,3000);
             sensory_resp(1640) = outputs(1610) - outputs(1599) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
-            sensory_resp(160) = outputs(110) - outputs(99) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
+            sensory_resp(180) = outputs(110) - outputs(99) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
         sensory_resp_o = zeros(1,3000);
             sensory_resp_o(1640) = outputs_omit(1610) - outputs_omit(1599);
-            sensory_resp_o(160) = outputs_omit(110) - outputs_omit(99) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
+            sensory_resp_o(180) = outputs_omit(110) - outputs_omit(99) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
         sensory_resp_u = zeros(1,3000);
             sensory_resp_u(1640) = outputs_uncued(1610) - outputs_uncued(1599) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
-            sensory_resp_u(160) = outputs_uncued(110) - outputs_uncued(99);
+            sensory_resp_u(180) = outputs_uncued(110) - outputs_uncued(99);
         
         
         pred_da_stime = sensory_resp;
