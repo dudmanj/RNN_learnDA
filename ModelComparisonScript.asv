@@ -88,7 +88,7 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-PEintAll run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-noValShift run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -389,7 +389,7 @@ jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 4;
+s_scl = 2;
 m_scl = 1;
 cnt = 1;
 
@@ -420,6 +420,7 @@ end
 
 % init_choice = randperm(18,9);
 init_choice = 1:numel(run);
+% init_choice = [3:6:21];
 
 for qq=1:7 % hundred trial bins
     
@@ -435,7 +436,7 @@ end
 figure(32); clf;
 subplot(121);
 errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
-axis([0 800 -0.2 0.75]);
+axis([0 800 -0.2 0.4]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 810],[0 0],'k-.'); hold on;
@@ -447,7 +448,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
-axis([0 810 -0.75 4]); 
+axis([0 810 -0.75 2.5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins

@@ -32,8 +32,8 @@ global pt_on;
         tmp_gauss = tmp_gauss./integral;
 
         scale_factor = 3;
-        da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.9.*tmp_gauss;
-        da_imp_resp_f_oi = -0.9.*tmp_gauss;                
+        da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.8.*tmp_gauss;
+        da_imp_resp_f_oi = -0.8.*tmp_gauss;                
         da_imp_resp_f_ei = da_imp_resp_f_ei * 1.25;
     else
         da_imp_resp_f_ei = da_imp_resp_f_ee;
@@ -48,7 +48,7 @@ pred_da_sense_u = [];
 pred_da_sense_o = [];
 % DA_trans = cumsum(TNC_CreateGaussian(500,150,1000,1));
 DA_trans = cumsum(TNC_CreateGaussian(700,200,1000,1));
-out_scale_da = 200;
+out_scale_da = 100;
 
 clear plot_stats;
 pass        = 1;
@@ -266,7 +266,8 @@ while pass <= 800 % stop when reward collection is very good
         eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
 
         % current reward value normalized over {0,1} like derivative
-        curr_val = 1- (1-exp(-(deltaRew-50)/500));        
+%         curr_val = 1- (1-exp(-(deltaRew-50)/500));        
+        curr_val = 1- (1-exp(-(deltaRew)/500));        
         pred_val_r = outputs(1599); % predicted value at reward
         error_r = curr_val-pred_val_r;
         error_c = 0.33*curr_val; % ~2*tau decay of cue eligibility trace
@@ -634,7 +635,7 @@ while pass <= 800 % stop when reward collection is very good
         end
 
         if numel(find(init_consume>0))>0
-            pred_da_time(round(mean(init_consume(init_consume>0)))) = (numel(find(init_consume>0)) / error_reps) / error_reps; % scale by probability of reactive init
+            pred_da_time(round(mean(init_consume(init_consume>0)))) = ( net_out.wIn(net.oUind,2)./trans_sat ); % scale by probability of reactive init
         end
 
         pred_da_move = [ pred_da_move ; conv(pred_da_time,da_imp_resp_f_ei,'same') + conv(pred_da_time_cue,da_imp_resp_f_oi,'same')];
@@ -654,7 +655,7 @@ while pass <= 800 % stop when reward collection is very good
         end
         
         if numel(find(init_consume_u>0))>0
-            pred_da_time_u(round(mean(init_consume_u(init_consume_u>0)))) = (numel(find(init_consume_u>0)) / error_reps) / error_reps; % scale by probability of reactive init
+            pred_da_time_u(round(mean(init_consume_u(init_consume_u>0)))) = ( net_out.wIn(net.oUind,2)./trans_sat ); % scale by probability of reactive init
         end
 
         pred_da_move_u = [ pred_da_move_u ; conv(pred_da_time_u,da_imp_resp_f_ei,'same') ];
@@ -675,16 +676,16 @@ while pass <= 800 % stop when reward collection is very good
             end
             tmp = find(all_inits>100 & all_inits<600);
             if numel(tmp)>0
-                pred_da_time_o_cue(all_inits(tmp(1)))=1./(1+net_out.wIn(net.oUind,1)); % reduce inhibition by expectation
+                pred_da_time_o_cue(all_inits(tmp(1)))= 1-( net_out.wIn(net.oUind,1)./trans_sat_c ); % reduce inhibition by expectation
             end
 
         end
         
         if numel(find(init_consume_o>0))>0
-            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = (numel(find(init_consume_o>0)) / error_reps) / error_reps; % scale by probability of reactive init
+            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = ( net_out.wIn(net.oUind,1)./trans_sat_c ); % scale by probability of reactive init
         end
 
-        pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same')+conv(pred_da_time_o_cue,da_imp_resp_f_oi,'same') ];
+        pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same') + conv(pred_da_time_o_cue,da_imp_resp_f_oi,'same') ];
         pred_da_sense_o = [ pred_da_sense_o ; conv(pred_da_stime_o,da_imp_resp_f_se,'same') ];
         
         
