@@ -48,6 +48,7 @@ pred_da_sense_u = [];
 pred_da_sense_o = [];
 % DA_trans = cumsum(TNC_CreateGaussian(500,150,1000,1));
 DA_trans = cumsum(TNC_CreateGaussian(700,200,1000,1));
+out_scale_da = 200;
 
 clear plot_stats;
 pass        = 1;
@@ -70,9 +71,9 @@ dt_div_tau  = dt/tau;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
 % eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
-eta_J       = 2.5e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
+eta_J       = 1e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./30 ./ tau_trans;     % best data match around 30-40 for tau_trans
-eta_wIn     = 1./70 .* tau_trans;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./100; % .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -255,31 +256,27 @@ while pass <= 800 % stop when reward collection is very good
 %----------- Computer weight updates
 
         % Using ~DA activity to compute updates (multiply through by derivative of policy during reward delivery component)
-
-        dpolicy = round(1000.*(outputs(1610) - outputs(1599)));        
+        dpolicy = round(out_scale_da.*(outputs(1610) - outputs(1599)));        
         if dpolicy<=1
             dpolicy=1;
         end
         if dpolicy>=1000
             dpolicy=1000;
         end
-
         eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
 
         % current reward value normalized over {0,1} like derivative
-        curr_val = 1- (1-exp(-deltaRew/500));
-        curr_val_c = curr_val*0.5;
-        
+        curr_val = 1- (1-exp(-(deltaRew-50)/500));        
         pred_val_r = outputs(1599); % predicted value at reward
-        pred_val_c = outputs(110); % predicted value at cue
-        
+        error_r = curr_val-pred_val_r;
+        error_c = 0.33*curr_val; % ~2*tau decay of cue eligibility trace
+
+        % Performance error for updating RNN
+        R_curr(curr_cond) = error_r;
 %         PE = error_r;
         PE = R_curr(curr_cond)-R_bar(curr_cond);
-        error_r = curr_val-pred_val_r;
-        error_c = 0.1*curr_val;
 
         net_run.pass(pass).peI   = error_r;
-
         
         % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
         switch stim
@@ -288,17 +285,17 @@ while pass <= 800 % stop when reward collection is very good
                 if numel(find(outputs_t>1098 & outputs_t<1598))<1
                     stim_bonus = 4;                    
                 else
-                    stim_bonus = 1;                  
+                    stim_bonus = 0;                  
                 end
                 
             case 0
-                stim_bonus = 1;                    
+                stim_bonus = 0;                    
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 4;                    
                 else
-                    stim_bonus = 1;                    
+                    stim_bonus = 0;                    
                 end
                 
             case 20
@@ -306,33 +303,33 @@ while pass <= 800 % stop when reward collection is very good
                     stim_bonus = 4;
                     error_c = 1;
                 else
-                    stim_bonus = 1;                    
+                    stim_bonus = 0;                    
                 end
 
             case 21
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 1;
+                    stim_bonus = 0;
                     error_c = 1;
                 else
-                    stim_bonus = 1;                    
+                    stim_bonus = 0;                    
                 end
 
             case 22
                 if numel(find(outputs_t>1098 & outputs_t<1598))<=1
-                    stim_bonus = 1;
+                    stim_bonus = 0;
                     error_c = 1;
                 else
-                    stim_bonus = 1;                    
+                    stim_bonus = 0;                    
                 end
                 
             otherwise
-                stim_bonus = 1;
+                stim_bonus = 0;
 
         end
 
 
         % ACTR formulation
-        delta_J = -eta_J .* eta_DA_mult .* stim_bonus .* e .* PE;
+        delta_J = -eta_J .* e .* PE .* (eta_DA_mult + stim_bonus);
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -346,7 +343,8 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + (trans_sat-net_out.wIn(net.oUind,2)) .* ( eta_wIn .* error_r .* stim_bonus .* eta_DA_mult );
+%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
         
         if net_out.wIn(net.oUind,2)>trans_sat
             net_out.wIn(net.oUind,2)=trans_sat;
@@ -354,9 +352,10 @@ while pass <= 800 % stop when reward collection is very good
             net_out.wIn(net.oUind,2)=0;
         end
         
-        trans_sat_c = trans_sat/2;
+        trans_sat_c = trans_sat;
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + (trans_sat_c-net_out.wIn(net.oUind,1)) .* ( eta_wIn .* error_c .* stim_bonus .* eta_DA_mult  );        
+%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
 
         if net_out.wIn(net.oUind,1)>trans_sat_c
             net_out.wIn(net.oUind,1)=trans_sat_c;
@@ -476,8 +475,8 @@ while pass <= 800 % stop when reward collection is very good
                 net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
                 net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
 
-            R_bar_prev(curr_cond) = R_bar(curr_cond);
-            R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
+%             R_bar_prev(curr_cond) = R_bar(curr_cond);
+%             R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
 
             running_err = [running_err , [mean(err_vector_x) ; mean(err_vector_y)] ];
             running_bar = [running_bar , R_bar(curr_cond) ];
@@ -547,14 +546,58 @@ while pass <= 800 % stop when reward collection is very good
 %----------- NOTE: eta_DA_mult should really be a nonlinear function of derivative
 
         sensory_resp = zeros(1,3000);
-            sensory_resp(1640) = outputs(1610) - outputs(1599) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
-            sensory_resp(180) = outputs(110) - outputs(99) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
+            dpolicy = round(out_scale_da.*(outputs(1610) - outputs(1599)));        
+                if dpolicy<=1
+                    dpolicy=1;
+                end
+                if dpolicy>=1000
+                    dpolicy=1000;
+                end
+            sensory_resp(1640) = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
+            dpolicy = round(out_scale_da.*(outputs(110) - outputs(99)));        
+                if dpolicy<=1
+                    dpolicy=1;
+                end
+                if dpolicy>=1000
+                    dpolicy=1000;
+                end
+            sensory_resp(180) = DA_trans(dpolicy) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
+
         sensory_resp_o = zeros(1,3000);
-            sensory_resp_o(1640) = outputs_omit(1610) - outputs_omit(1599);
-            sensory_resp_o(180) = outputs_omit(110) - outputs_omit(99) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
+            dpolicy = round(out_scale_da.*(outputs_omit(1610) - outputs_omit(1599)));        
+                if dpolicy<=1
+                    dpolicy=1;
+                end
+                if dpolicy>=1000
+                    dpolicy=1000;
+                end
+            sensory_resp_o(1640) = DA_trans(dpolicy);
+                dpolicy = round(out_scale_da.*(outputs_omit(110) - outputs_omit(99)));        
+                if dpolicy<=1
+                    dpolicy=1;
+                end
+                if dpolicy>=1000
+                    dpolicy=1000;
+                end
+            sensory_resp_o(180) = DA_trans(dpolicy) + 0.5*DA_trans(floor(net_out.wIn(net.oUind,1)*100)+1);
+        
         sensory_resp_u = zeros(1,3000);
-            sensory_resp_u(1640) = outputs_uncued(1610) - outputs_uncued(1599) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
-            sensory_resp_u(180) = outputs_uncued(110) - outputs_uncued(99);
+                dpolicy = round(out_scale_da.*(outputs_uncued(1610) - outputs_uncued(1599)));        
+                if dpolicy<=1
+                    dpolicy=1;
+                end
+                if dpolicy>=1000
+                    dpolicy=1000;
+                end
+            sensory_resp_u(1640) = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
+                dpolicy = round(out_scale_da.*(outputs_uncued(110) - outputs_uncued(99)));        
+                if dpolicy<=1
+                    dpolicy=1;
+                end
+                if dpolicy>=1000
+                    dpolicy=1000;
+                end
+            sensory_resp_u(180) = DA_trans(dpolicy);
         
         
         pred_da_stime = sensory_resp;
@@ -586,7 +629,7 @@ while pass <= 800 % stop when reward collection is very good
             end
             tmp = find(all_inits>100 & all_inits<600);
             if numel(tmp)>0
-                pred_da_time_cue(all_inits(tmp(1)))=1;
+                pred_da_time_cue(all_inits(tmp(1)))=1./(1+net_out.wIn(net.oUind,1)); % reduce inhibition by expectation
             end
         end
 
@@ -632,7 +675,7 @@ while pass <= 800 % stop when reward collection is very good
             end
             tmp = find(all_inits>100 & all_inits<600);
             if numel(tmp)>0
-                pred_da_time_o_cue(all_inits(tmp(1)))=1;
+                pred_da_time_o_cue(all_inits(tmp(1)))=1./(1+net_out.wIn(net.oUind,1)); % reduce inhibition by expectation
             end
 
         end

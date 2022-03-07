@@ -45,31 +45,34 @@ pt_on = 1;
 % wIn_vec = [zeros(1,num_sims)];
 % tau_vec = [ones(1,num_sims)];
 
-num_sims = 18;
+% tmp = repmat([1.5 2 2.5],6,1);
+% tau_vec = tmp(1:numel(tmp));
+% sat_vec = ones(1,6)*10;
+
+num_sims = 24;
 stim_list = zeros(1,num_sims);
 
-inits = repmat([180 123 110 132 171 141],3);
-wIn_vec = zeros(1,num_sims);
-% tmp = repmat([1.5 2 2.5],6,1);
-tmp = repmat([2.5 2 1.5],6,1);
-tau_vec = tmp(1:numel(tmp));
+% inits = repmat([180 123 110 132 171 141],1,6);
+inits = repmat([201 132 110 118 204 195],1,4);
+tmp = repmat([0 1 2 3],6,1);
+wIn_vec = tmp(1:numel(tmp));
+% tmp = repmat([2 4 6 8],6,1);
+% tau_vec = tmp(1:numel(tmp));
+tau_vec = ones(1,num_sims)*3;
+sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
-sat_vec = [randperm(6)+4 randperm(6)+4 randperm(6)+4];
-% sat_vec = ones(1,6)*10;
 clear run;
 
 parfor g = 1:numel(stim_list)
 
     net_init = gens.dets(inits(g)).net % diverse initial states
                 
-%     net_init.wIn(net.oUind,:) = [0 0];
     net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
     tau_trans = tau_vec(g); % now controls eta_wIn learning rate
     filt_scale = 50; % plant scale factor currently
     trans_sat = sat_vec(g);
-
-    % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
     stim = stim_list(g);
+
     [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale,trans_sat);
 
     run(g).output = output;
@@ -85,7 +88,7 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-PEintAll run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -128,7 +131,7 @@ hold on; plot(trans_vec,react_sm);
 %% 0.5 Compute full error surface
 s_map = TNC_CreateRBColormap(1000,'cpb');
 trans_vec = -0.5:0.5:11;
-sust_vec = -0.35:0.05:1;
+sust_vec = -0.25:0.05:1;
 reps=1:100;
 lat = zeros(numel(sust_vec),numel(reps));
 lat_mat = zeros(numel(sust_vec),numel(trans_vec));
@@ -198,7 +201,7 @@ figure(2+fOff); clf;
 figure(2); clf;
 
 scnt = 1;
-% [vals,inds] = sort(tau_vec);
+% [vals,inds] = sort(tau_vec+sat_vec);
 inds = 1:num_sims;
 
 for g=1:numel(run)
@@ -235,7 +238,7 @@ for g=1:numel(run)
         
         % Fit an exponential to the data
         trial_rng = 1:161;
-        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.5 -8 -0.5],'Upper',[4 0.1 4 0.1]);    
+        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.5 -8 -0.5],'Upper',[0 +0.05 0 +0.05]);    
         transient_model = fit( trial_rng' , summary_data.analysis(1).rct(scnt,:)'-trans_off,'exp2','Lower',[50 -0.05 50 -0.5],'Upper',[500 0 500 0]);
         latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1400 0 1400 0]);
         
@@ -245,17 +248,18 @@ for g=1:numel(run)
         
         figure(2);
         total_sims = sum(stim_list==0);
-        subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 161 0 500]); axis off;
+        subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 41 0 500]); axis off;
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]); axis off;
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]); axis off;
         
         
         figure(2+fOff);
-        plot3(sustained_sm,transient_sm,latency_sm,'k-','linewidth',1.5); hold on;
+        plot3(sustained_sm,transient_sm,log10(latency_sm),'k-','linewidth',1.5); hold on;
             view(48,30);
             % set(gca,'YDir','reverse');
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
+            axis([-2 8 50 375 1.75 3.25]);
 
         figure(1+fOff);
         if scnt==1    
@@ -385,7 +389,7 @@ jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 2;
+s_scl = 4;
 m_scl = 1;
 cnt = 1;
 
@@ -431,7 +435,7 @@ end
 figure(32); clf;
 subplot(121);
 errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
-axis([0 800 -0.75 2.5]);
+axis([0 800 -0.2 0.75]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 810],[0 0],'k-.'); hold on;
@@ -443,7 +447,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
-axis([0 810 -0.75 5]); 
+axis([0 810 -0.75 4]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -587,7 +591,7 @@ for g=1:numel(run)
     
 end
 
-figure(50); 
+figure(50); clf;
 subplot(6,1,1);
 imagesc(summary_data.analysis(5).pe,[-250 250]); colormap(pe_map);
 subplot(6,1,2);
@@ -628,7 +632,7 @@ subplot(121);
 plot([-0.5 1.5],[0 0],'k--'); hold on;
 swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.dist(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5],'MarkerEdgeAlpha',0.2);
 plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
-ylabel('Mean PE'); axis([-0.5 1.5 -450 450]);
+ylabel('Mean PE'); axis([-0.5 1.5 -1 1]);
 subplot(122);
 plot([-0.5 1.5],[0 0],'k--'); hold on;
 swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5],'MarkerEdgeAlpha',0.2);
@@ -636,7 +640,7 @@ plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avgI,'ko-','linewidth',4);
 ylabel('Mean PEI'); axis([-0.5 1.5 -1 2]);
 
 figure(52); clf; subplot(121);
-plot([-600 800],[0 0],'k-'); hold on;
+plot([-1 1],[0 0],'k-'); hold on;
 plot([0 0],[-2 2],'k-');
 scatter(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.distI,10,'filled','MarkerFaceAlpha',0.25);
 ylabel('PE internal'); xlabel('PE veridical');
