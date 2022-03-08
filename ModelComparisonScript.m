@@ -88,7 +88,8 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-wDaBeta run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-NOBeta run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-WithBeta run stim_list inits
 % save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-DaIsPE run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
@@ -239,9 +240,9 @@ for g=1:numel(run)
         
         % Fit an exponential to the data
         trial_rng = 1:161;
-        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.5 -8 -0.5],'Upper',[0 +0.05 0 +0.05]);    
+        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-sust_off -0.5 -sust_off -0.5],'Upper',[0 +0.05 0 +0.05]);    
         transient_model = fit( trial_rng' , summary_data.analysis(1).rct(scnt,:)'-trans_off,'exp2','Lower',[50 -0.05 50 -0.5],'Upper',[500 0 500 0]);
-        latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1400 0 1400 0]);
+        latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1000 0 1000 0]);
         
         transient_sm = transient_model(trial_rng)+trans_off;
         sustained_sm = sustained_model(trial_rng)+sust_off;
@@ -251,7 +252,7 @@ for g=1:numel(run)
         total_sims = sum(stim_list==0);
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 41 0 500]); axis off;
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]); axis off;
-        subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]); axis off;
+        subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis tight; axis off;
         
         
         figure(2+fOff);
@@ -391,7 +392,7 @@ t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
 s_scl = 3;
-m_scl = 1;
+m_scl = 0.5;
 cnt = 1;
 
 cue_win = 100:600;
@@ -450,7 +451,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
-axis([0 810 -0.5 3]); 
+axis([0 810 -0.25 2.5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -616,9 +617,9 @@ summary_data.analysis(5).all_cntrl_tcnt = summary_data.analysis(5).tcnt(1:numel(
 
 cnt = 1;
 for pp=0:1 %unique(summary_data.analysis(5).all_cntrl_plck)
-    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = mean(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = median(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
     summary_data.analysis(5).bin_cntrl_LKperPE.std(cnt) = std(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
-    summary_data.analysis(5).bin_cntrl_LKperPE.avgI(cnt) = mean(summary_data.analysis(5).all_cntrl_peI(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.avgI(cnt) = median(summary_data.analysis(5).all_cntrl_peI(summary_data.analysis(5).all_cntrl_plck==pp));
     summary_data.analysis(5).bin_cntrl_LKperPE.stdI(cnt) = std(summary_data.analysis(5).all_cntrl_peI(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
     cnt = cnt+1;
 end

@@ -73,7 +73,7 @@ alpha_X     = 0.33;
 % eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 eta_J       = 1e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./30 ./ tau_trans;     % best data match around 30-40 for tau_trans
-eta_wIn     = 1./90; % .* tau_trans;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./50; % .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -263,21 +263,23 @@ while pass <= 800 % stop when reward collection is very good
         if dpolicy>=1000
             dpolicy=1000;
         end
-%         eta_DA_mult = 1 + DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
-        eta_DA_mult = 1;
+        eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
+%         eta_DA_mult = 0;
 
         % current reward value normalized over {0,1} like derivative
-%         curr_val = 1- (1-exp(-(deltaRew-50)/500));        
         curr_val = 1- (1-exp(-(deltaRew)/500));        
         pred_val_r = outputs(1599); % predicted value at reward
-        error_r = curr_val-pred_val_r;
+        error_r = curr_val-pred_val_r;        
         error_c = 0.33*curr_val; % ~2*tau decay of cue eligibility trace
+
+% VERSION WHERE DA==PE
+%         error_r = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);        
+%         error_c = 0.33*error_r; % ~2*tau decay of cue eligibility trace
 
         % Performance error for updating RNN
         R_curr(curr_cond) = error_r;
 %         PE = error_r;
         PE = R_curr(curr_cond)-R_bar(curr_cond);
-        
 
         net_run.pass(pass).peI   = error_r;
         
@@ -333,6 +335,8 @@ while pass <= 800 % stop when reward collection is very good
 
         % ACTR formulation
         delta_J = -eta_J .* e .* PE .* (eta_DA_mult + stim_bonus);
+% VERSION WHERE DA==PE
+%         delta_J = -eta_J .* e .* PE;
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -346,7 +350,9 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
+%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( 5 .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
+% VERSION WHERE DA==PE
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
         
         if net_out.wIn(net.oUind,2)>trans_sat
@@ -355,9 +361,11 @@ while pass <= 800 % stop when reward collection is very good
             net_out.wIn(net.oUind,2)=0;
         end
         
-        trans_sat_c = trans_sat;
+        trans_sat_c = trans_sat*0.75;
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
+%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( 5 .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
+% VERSION WHERE DA==PE
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
 
         if net_out.wIn(net.oUind,1)>trans_sat_c
@@ -670,21 +678,21 @@ while pass <= 800 % stop when reward collection is very good
         for qq=1:error_reps
             [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale,zeros(1,3000));
             all_inits_o = find([0 diff(state_o)]==1);
-            cons_inits_o = find(all_inits_o>rewTime,1);
+            cons_inits_o = find(all_inits_o>rewTime+40,1);
             if numel(cons_inits_o)>0 
                 init_consume_o(qq) = all_inits_o(cons_inits_o);
             else
                 init_consume_o(qq) = 0;
             end
-            tmp = find(all_inits>100 & all_inits<600);
+            tmp = find(all_inits>140 & all_inits<600);
             if numel(tmp)>0
-                pred_da_time_o_cue(all_inits(tmp(1)))= 1-( net_out.wIn(net.oUind,1)./trans_sat_c ); % reduce inhibition by expectation
+                pred_da_time_o_cue(all_inits(tmp(1)))= 1-( net_out.wIn(net.oUind,1)./trans_sat ); % reduce inhibition by expectation
             end
 
         end
         
         if numel(find(init_consume_o>0))>0
-            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = ( net_out.wIn(net.oUind,1)./trans_sat_c ); % scale by probability of reactive init
+            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = ( net_out.wIn(net.oUind,1)./trans_sat ); % scale by probability of reactive init
         end
 
         pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same') + conv(pred_da_time_o_cue,da_imp_resp_f_oi,'same') ];

@@ -58,7 +58,7 @@ tmp = repmat([0 0.5 1 2],6,1);
 wIn_vec = tmp(1:numel(tmp));
 % tmp = repmat([2 4 6 8],6,1);
 % tau_vec = tmp(1:numel(tmp));
-tau_vec = ones(1,num_sims)*2.5;
+tau_vec = ones(1,num_sims)*3;
 sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
 clear run;
@@ -88,7 +88,8 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-wDaBeta run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-NOBeta run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-WithBeta run stim_list inits
 % save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-DaIsPE run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
@@ -239,9 +240,9 @@ for g=1:numel(run)
         
         % Fit an exponential to the data
         trial_rng = 1:161;
-        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-8 -0.5 -8 -0.5],'Upper',[0 +0.05 0 +0.05]);    
+        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-sust_off -0.5 -sust_off -0.5],'Upper',[0 +0.05 0 +0.05]);    
         transient_model = fit( trial_rng' , summary_data.analysis(1).rct(scnt,:)'-trans_off,'exp2','Lower',[50 -0.05 50 -0.5],'Upper',[500 0 500 0]);
-        latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1400 0 1400 0]);
+        latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1000 0 1000 0]);
         
         transient_sm = transient_model(trial_rng)+trans_off;
         sustained_sm = sustained_model(trial_rng)+sust_off;
@@ -251,7 +252,7 @@ for g=1:numel(run)
         total_sims = sum(stim_list==0);
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 41 0 500]); axis off;
         subplot(total_sims,3,((find(inds==scnt)-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]); axis off;
-        subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis([0 161 70 700]); axis off;
+        subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis tight; axis off;
         
         
         figure(2+fOff);
@@ -390,7 +391,7 @@ jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 2.5;
+s_scl = 3;
 m_scl = 0.5;
 cnt = 1;
 
@@ -450,7 +451,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
-axis([0 810 -0.5 3]); 
+axis([0 810 -0.25 2.5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -616,9 +617,9 @@ summary_data.analysis(5).all_cntrl_tcnt = summary_data.analysis(5).tcnt(1:numel(
 
 cnt = 1;
 for pp=0:1 %unique(summary_data.analysis(5).all_cntrl_plck)
-    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = mean(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.avg(cnt) = median(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp));
     summary_data.analysis(5).bin_cntrl_LKperPE.std(cnt) = std(summary_data.analysis(5).all_cntrl_pe(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
-    summary_data.analysis(5).bin_cntrl_LKperPE.avgI(cnt) = mean(summary_data.analysis(5).all_cntrl_peI(summary_data.analysis(5).all_cntrl_plck==pp));
+    summary_data.analysis(5).bin_cntrl_LKperPE.avgI(cnt) = median(summary_data.analysis(5).all_cntrl_peI(summary_data.analysis(5).all_cntrl_plck==pp));
     summary_data.analysis(5).bin_cntrl_LKperPE.stdI(cnt) = std(summary_data.analysis(5).all_cntrl_peI(summary_data.analysis(5).all_cntrl_plck==pp))./sqrt(sum(summary_data.analysis(5).all_cntrl_plck==pp));
     cnt = cnt+1;
 end
@@ -667,30 +668,24 @@ global pt_on;
 pt_on = 1;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
-num_sims = 36;
-stim_list = [ -1*ones(1,6) zeros(1,6) ones(1,6) 20*ones(1,6) 21*ones(1,6) 22*ones(1,6) ];
-stim_list = zeros(1,num_sims);
-
-% inits = repmat([180 123 110 132 171 141],1,6);
-inits = repmat([201 132 110 118 204 195],1,4);
-tmp = repmat([0 0.5 1 2],6,1);
-wIn_vec = tmp(1:numel(tmp));
-tau_vec = ones(1,num_sims)*2.5;
-sat_vec = repmat(randperm(6)+4,1,6);
+num_sims    = 36;
+stim_list   = [ -1*ones(1,6) zeros(1,6) ones(1,6) 20*ones(1,6) 21*ones(1,6) 22*ones(1,6) ];
+inits       = repmat([201 132 110 118 204 195],1,6);
+wIn_vec     = ones(1,num_sims);
+tau_vec     = ones(1,num_sims)*2.5;
+sat_vec     = repmat(randperm(6)+4,1,6);
 
 clear run;
 
 parfor g = 1:numel(stim_list)
 
-    net_init = gens.dets(inits(g)).net % diverse initial states
-                
+    net_init = gens.dets(inits(g)).net % diverse initial states                
     net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
     tau_trans = tau_vec(g); % now controls eta_wIn learning rate
     filt_scale = 50; % plant scale factor currently
     trans_sat = sat_vec(g);
-
-    % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
     stim = stim_list(g);
+
     [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale,trans_sat);
 
     run(g).output = output;
