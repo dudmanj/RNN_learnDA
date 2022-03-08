@@ -58,7 +58,7 @@ tmp = repmat([0 0.5 1 2],6,1);
 wIn_vec = tmp(1:numel(tmp));
 % tmp = repmat([2 4 6 8],6,1);
 % tau_vec = tmp(1:numel(tmp));
-tau_vec = ones(1,num_sims)*2.5;
+tau_vec = ones(1,num_sims)*3;
 sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
 clear run;
@@ -390,8 +390,8 @@ jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 2.5;
-m_scl = 0.5;
+s_scl = 3;
+m_scl = 1;
 cnt = 1;
 
 cue_win = 100:600;

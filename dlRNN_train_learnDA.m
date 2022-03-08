@@ -359,7 +359,7 @@ while pass <= 800 % stop when reward collection is very good
             net_out.wIn(net.oUind,2)=0;
         end
         
-        trans_sat_c = trans_sat;
+        trans_sat_c = trans_sat*0.75;
         % ACTR formulation
         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
@@ -674,21 +674,21 @@ while pass <= 800 % stop when reward collection is very good
         for qq=1:error_reps
             [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale,zeros(1,3000));
             all_inits_o = find([0 diff(state_o)]==1);
-            cons_inits_o = find(all_inits_o>rewTime,1);
+            cons_inits_o = find(all_inits_o>rewTime+40,1);
             if numel(cons_inits_o)>0 
                 init_consume_o(qq) = all_inits_o(cons_inits_o);
             else
                 init_consume_o(qq) = 0;
             end
-            tmp = find(all_inits>100 & all_inits<600);
+            tmp = find(all_inits>140 & all_inits<600);
             if numel(tmp)>0
-                pred_da_time_o_cue(all_inits(tmp(1)))= 1-( net_out.wIn(net.oUind,1)./trans_sat_c ); % reduce inhibition by expectation
+                pred_da_time_o_cue(all_inits(tmp(1)))= 1-( net_out.wIn(net.oUind,1)./trans_sat ); % reduce inhibition by expectation
             end
 
         end
         
         if numel(find(init_consume_o>0))>0
-            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = ( net_out.wIn(net.oUind,1)./trans_sat_c ); % scale by probability of reactive init
+            pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = ( net_out.wIn(net.oUind,1)./trans_sat ); % scale by probability of reactive init
         end
 
         pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same') + conv(pred_da_time_o_cue,da_imp_resp_f_oi,'same') ];
