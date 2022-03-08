@@ -54,11 +54,11 @@ stim_list = zeros(1,num_sims);
 
 % inits = repmat([180 123 110 132 171 141],1,6);
 inits = repmat([201 132 110 118 204 195],1,4);
-tmp = repmat([0 1 2 3],6,1);
+tmp = repmat([0 0.5 1 2],6,1);
 wIn_vec = tmp(1:numel(tmp));
 % tmp = repmat([2 4 6 8],6,1);
 % tau_vec = tmp(1:numel(tmp));
-tau_vec = ones(1,num_sims)*3;
+tau_vec = ones(1,num_sims)*2.5;
 sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
 clear run;
@@ -88,7 +88,8 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-noValShift run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-wDaBeta run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-DaIsPE run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -195,7 +196,7 @@ box on;
 clear summary_data
 cmap = TNC_CreateRBColormap(6,'gp');
 cmap2 = repmat(cmap(1:6,:),3,1);
-fOff = 10; % for when rand wIn init is used
+fOff = 200; % for when rand wIn init is used
 figure(1+fOff); clf;
 figure(2+fOff); clf;
 figure(2); clf;
@@ -389,7 +390,7 @@ jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 3;
+s_scl = 2.5;
 m_scl = 0.5;
 cnt = 1;
 
@@ -435,8 +436,9 @@ end
 
 figure(32); clf;
 subplot(121);
+plot([0 800],[0 0],'k--'); hold on;
 errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
-axis([0 800 -0.1 0.5]);
+axis([0 800 -0.1 0.6]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 810],[0 0],'k-.'); hold on;
@@ -448,7 +450,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
-axis([0 810 -0.75 2.5]); 
+axis([0 810 -0.5 3]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -488,7 +490,7 @@ for egs_da=1:3
         plot(-1599:1400,tmp_da,'color',[0.5 0.5 0.5 0.5]); hold on;
     end
     plot(-1599:1400, mean( mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,:),1) ,3) ,'color',[0 0 0],'linewidth',2); hold on;
-    axis([-1600 1400 -1e-3 17e-3]); box off;
+    axis([-1600 1400 -1e-3 8e-3]); box off;
 end
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
@@ -665,26 +667,24 @@ global pt_on;
 pt_on = 1;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
-stim_list = [ -1*ones(1,6) zeros(1,6) ones(1,6) 20*ones(1,6) 21*ones(1,6) 22*ones(1,6) ];
-inits = repmat(ii([141 123 110 132 171 180]),1,6);
-
-wIn_vec = repmat([rand(1,6).*2],1,6);
-tau_vec = repmat(2*ones(1,6),1,6);
-sat_vec = repmat(randperm(6)+4,1,6);
+num_sims    = 36;
+stim_list   = [ -1*ones(1,6) zeros(1,6) ones(1,6) 20*ones(1,6) 21*ones(1,6) 22*ones(1,6) ];
+inits       = repmat([201 132 110 118 204 195],1,6);
+wIn_vec     = ones(1,num_sims);
+tau_vec     = ones(1,num_sims)*2.5;
+sat_vec     = repmat(randperm(6)+4,1,6);
 
 clear run;
 
 parfor g = 1:numel(stim_list)
 
-    net_init = gens.dets(inits(g)).net % diverse initial states
-                
+    net_init = gens.dets(inits(g)).net % diverse initial states                
     net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
     tau_trans = tau_vec(g); % now controls eta_wIn learning rate
     filt_scale = 50; % plant scale factor currently
     trans_sat = sat_vec(g);
-
-    % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
     stim = stim_list(g);
+
     [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale,trans_sat);
 
     run(g).output = output;

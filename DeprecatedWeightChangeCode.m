@@ -4,6 +4,10 @@ DA_trans = cumsum(TNC_CreateGaussian(700,200,1000,1)).*3;
 figure(4); plot(DA_trans); hold on;
 
 %%
+activity = zeros(1,3000)
+back_p          = exp(([1:numel(activity)]-numel(activity)-3)./25);
+figure(900); plot(back_p); hold on
+%%
 
 % Using ~DA activity to compute updates (multiply through by derivative of policy during reward delivery component)
         eta_DA_mult = outputs(1610) - outputs(1599);

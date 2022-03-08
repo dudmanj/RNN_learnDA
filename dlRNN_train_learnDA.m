@@ -73,7 +73,7 @@ alpha_X     = 0.33;
 % eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 eta_J       = 1e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 % eta_wIn     = 1./30 ./ tau_trans;     % best data match around 30-40 for tau_trans
-eta_wIn     = 1./100; % .* tau_trans;     % best data match around 30-40 for tau_trans
+eta_wIn     = 1./90; % .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -263,14 +263,19 @@ while pass <= 800 % stop when reward collection is very good
         if dpolicy>=1000
             dpolicy=1000;
         end
-        eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
+%         eta_DA_mult = 1 + DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);
+        eta_DA_mult = 1;
 
         % current reward value normalized over {0,1} like derivative
 %         curr_val = 1- (1-exp(-(deltaRew-50)/500));        
         curr_val = 1- (1-exp(-(deltaRew)/500));        
         pred_val_r = outputs(1599); % predicted value at reward
-        error_r = curr_val-pred_val_r;
+        error_r = curr_val-pred_val_r;        
         error_c = 0.33*curr_val; % ~2*tau decay of cue eligibility trace
+
+% VERSION WHERE DA==PE
+%         error_r = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);        
+%         error_c = 0.33*error_r; % ~2*tau decay of cue eligibility trace
 
         % Performance error for updating RNN
         R_curr(curr_cond) = error_r;
@@ -286,17 +291,17 @@ while pass <= 800 % stop when reward collection is very good
                 if numel(find(outputs_t>1098 & outputs_t<1598))<1
                     stim_bonus = 4;                    
                 else
-                    stim_bonus = 0;                  
+                    stim_bonus = 1;                  
                 end
                 
             case 0
-                stim_bonus = 0;                    
+                stim_bonus = 1;                    
                 
             case 1
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 4;                    
                 else
-                    stim_bonus = 0;                    
+                    stim_bonus = 1;                    
                 end
                 
             case 20
@@ -304,33 +309,34 @@ while pass <= 800 % stop when reward collection is very good
                     stim_bonus = 4;
                     error_c = 1;
                 else
-                    stim_bonus = 0;                    
+                    stim_bonus = 1;                    
                 end
 
             case 21
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
-                    stim_bonus = 0;
+                    stim_bonus = 1;
                     error_c = 1;
                 else
-                    stim_bonus = 0;                    
+                    stim_bonus = 1;                    
                 end
 
             case 22
                 if numel(find(outputs_t>1098 & outputs_t<1598))<=1
-                    stim_bonus = 0;
+                    stim_bonus = 1;
                     error_c = 1;
                 else
-                    stim_bonus = 0;                    
+                    stim_bonus = 1;                    
                 end
                 
             otherwise
-                stim_bonus = 0;
+                stim_bonus = 1;
 
         end
 
 
         % ACTR formulation
         delta_J = -eta_J .* e .* PE .* (eta_DA_mult + stim_bonus);
+%         delta_J = -eta_J .* e .* PE;
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -344,8 +350,8 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR formulation
-%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
+%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
         
         if net_out.wIn(net.oUind,2)>trans_sat
             net_out.wIn(net.oUind,2)=trans_sat;
@@ -355,8 +361,8 @@ while pass <= 800 % stop when reward collection is very good
         
         trans_sat_c = trans_sat;
         % ACTR formulation
-%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
+%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
 
         if net_out.wIn(net.oUind,1)>trans_sat_c
             net_out.wIn(net.oUind,1)=trans_sat_c;
