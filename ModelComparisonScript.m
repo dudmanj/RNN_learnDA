@@ -363,6 +363,26 @@ xlabel('Trials'); ylabel('Cued DA magnitude'); title('Cued DA stim predictions')
 box off; legend({'','TD Cal','ACTR Cal','TD Supra','ACTR Supra'},'location','northwest');
 axis([50 750 -0.5 3]);
 
+% Now plot the predicted DA transients
+figure(13); clf;
+subplot(211); % calibrated prediction
+td_da_predict = zeros(1,3000);
+val_func = [0 diff(sim_summary.critic(1).v)];
+td_da_predict(100:100:2500) = val_func(6:end);
+td_da_predict = conv(td_da_predict,kern,'same');
+plot(-1599:1400,td_da_predict,'--','color',colors(1,:),'linewidth',2); hold on;
+plot(-1599:1400,mean(tmp_actr_cal(120:160,:)),'-','color',colors(1,:),'linewidth',2); hold on;
+axis([-1500 1500 -2.5e-3 2.5e-3]); box off;
+
+subplot(212); % supra prediction
+td_da_predict = zeros(1,3000);
+val_func = [0 diff(sim_summary.critic(2).v)];
+td_da_predict(100:100:2500) = val_func(6:end);
+td_da_predict = conv(td_da_predict,kern,'same');
+plot(-1599:1400,td_da_predict,'--','color',colors(3,:),'linewidth',2); hold on;
+plot(-1599:1400,mean(tmp_actr_sup(120:160,:)),'-','color',colors(3,:),'linewidth',2); hold on;
+axis([-1500 1500 -2.5e-3 2.5e-3]); box off;
+
 
 %% 3. RPE predictions
 % clear summary_data;
