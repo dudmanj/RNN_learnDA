@@ -272,23 +272,27 @@ pt_on = 1;
 num_sims = 12;
 inits = repmat(ii([201 130 98 119 141 195]),1,2);
 sat_vec = repmat(randperm(6)+4,1,2);
-stim_list = [ones(1,6) 20*ones(1,6)];
+stim_list = [zeros(1,6) 20*ones(1,6)];
 wIn_vec = zeros(1,num_sims);
 tau_vec = ones(1,num_sims);
 
-clear run;
 
+clear run;
 parfor g = 1:numel(stim_list)
 
     net_init = gens.dets(inits(g)).net % diverse initial states
                 
-    net_init.wIn(net.oUind,:) = [0 0];
-    tau_trans = tau_vec(g); % now controls eta_wIn learning rate
-    filt_scale = 50; % plant scale factor currently
-    trans_sat = sat_vec(g);
-    stim = stim_list(g);
+%     net_init.wIn(net.oUind,:) = [0 0];
+%     tau_trans = 1; % now controls wJ learning rate
 
-    [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_cuedDAstim(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale,trans_sat);
+    net_init.wIn(net.oUind,:) = [wIn_vec(g)*0.5 wIn_vec(g)];
+    tau_trans = tau_vec(g); % now controls eta_wIn learning rate
+
+    filt_scale = 50; % plant scale factor currently
+
+    % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
+    stim = stim_list(g);
+    [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_cuedDAstim(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
 
     run(g).output = output;
     run(g).net = net_out;
@@ -302,7 +306,7 @@ parfor g = 1:numel(stim_list)
 
 end
 
-save ~/'Dropbox (HHMI)'/cued-da-run2 run stim_list inits
+save ~/'Dropbox (HHMI)'/cued-da-run run stim_list inits
 
 %% 2.5 Plot figure panels for cued-DA predictions
 
@@ -337,32 +341,6 @@ for g=1:numel(run)
     end
 
 end
-
-% Assumes that ValuModelSims code has been run and sim_summary data
-% structure is availble for plotting
-
-
-colors = [0 0.67 1 0.5; 0 0 0 0.5; 1 0 0.67 0.5];
-
-% plot magnitude of cue RPE over trials as a function of stim intensity
-figure(12); clf;
-tmp_actr_cal = mean(summary_data.analysis(2).da.c(:,:,:),3);
-tmp_actr_sup = mean(summary_data.analysis(2).da_sl.c(:,:,:),3);
-plot([0 800],[0 0],'k-'); hold on;
-
-for sims=[1 3]
-    plot(100:100:700,sim_summary.rpe(100:100:700,critic.cueTime,sims),'o--','linewidth',3,'color',colors(sims,:)); hold on;
-    if sims==1
-        plot(100:100:700,tmp_actr_cal(21:20:141,276)*1000,'o-','linewidth',3,'color',colors(sims,:));        
-    elseif sims==3
-        plot(100:100:700,tmp_actr_sup(21:20:141,276)*1000,'o-','linewidth',3,'color',colors(sims,:));        
-    end
-end
-
-xlabel('Trials'); ylabel('Cued DA magnitude'); title('Cued DA stim predictions');
-box off; legend({'','TD Cal','ACTR Cal','TD Supra','ACTR Supra'},'location','northwest');
-axis([50 750 -0.5 3]);
-
 
 %% 3. RPE predictions
 % clear summary_data;
