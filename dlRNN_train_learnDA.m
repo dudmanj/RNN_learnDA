@@ -311,7 +311,8 @@ while pass <= 800 % stop when reward collection is very good
             case 21
                 if numel(find(outputs_t>1098 & outputs_t<1598))>1
                     stim_bonus = 1;
-                    error_c = 1;
+                    error_r = error_r + 1;
+                    error_c = error_c + 0.33;
                 else
                     stim_bonus = 1;                    
                 end
@@ -319,7 +320,8 @@ while pass <= 800 % stop when reward collection is very good
             case 22
                 if numel(find(outputs_t>1098 & outputs_t<1598))<=1
                     stim_bonus = 1;
-                    error_c = 1;
+                    error_r = error_r + 1;
+                    error_c = error_c + 0.33;
                 else
                     stim_bonus = 1;                    
                 end

@@ -233,7 +233,6 @@ for g=1:numel(run)
         if scnt==1    
             set(0,'DefaultFigureRenderer','painters');
             s = plot(cost_surf_sims); hold on;
-%             s = surf(sust_axis,trans_axis,cost_mat');  hold on;
             s.EdgeColor = [0.35 0.35 0.35];
             s.FaceAlpha = 0.85;
             s.FaceLighting = 'gouraud';
@@ -247,21 +246,14 @@ for g=1:numel(run)
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
         end
-%         if scnt<=9
-            % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
-            % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
-%             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
-            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm+100)+0.01,'w-','linewidth',1.5); hold on;
-%         else
-%             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.85 0.85 0.85]); hold on;
-%         end
+            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm+200),'w-','linewidth',1); hold on;
             box on; view(48,30);
             set(gca,'Color',[0.95 0.95 0.95]);
             grid on;
             ylabel('Reactive');
             xlabel('Anticipatory');
             zlabel('Cost');
-            axis([-1 6 50 650 0.2 1]);
+            axis([-2 6 100 750 0.1 1]);
             drawnow;
 
 
@@ -416,15 +408,15 @@ end
 figure(32); clf;
 subplot(121);
 plot([0 800],[0 0],'k--'); hold on;
-errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
+errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
 axis([0 800 -0.2 1.2]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 810],[0 0],'k-.'); hold on;
 % errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
 % errorbar(100:100:800,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
-errorbar(100:100:700,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2),'ro-','linewidth',3); hold on;
-errorbar(100:100:700,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2),'ko-','linewidth',3); hold on;
+errorbar(100:100:700,mean(summary_data.analysis(3).DA_resp.c_rew_bin,2),std(summary_data.analysis(3).DA_resp.c_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ro-','linewidth',3); hold on;
+errorbar(100:100:700,mean(summary_data.analysis(3).DA_resp.u_rew_bin,2),std(summary_data.analysis(3).DA_resp.u_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2)),'ko-','linewidth',3); hold on;
 xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
@@ -469,7 +461,7 @@ for egs_da=1:3
         plot(-1599:1400,tmp_da,'color',[0.5 0.5 0.5 0.5]); hold on;
     end
     plot(-1599:1400, mean( mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,:),1) ,3) ,'color',[0 0 0],'linewidth',2); hold on;
-    axis([-1600 1400 -1e-3 12e-3]); box off;
+    axis([-1600 1400 -1e-3 15e-3]); box off;
 end
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
@@ -516,12 +508,12 @@ plot_style  = 'pop'
 summary_data.analysis(4).da_lickplus = zeros(3000,1);
 summary_data.analysis(4).da_lickminus = zeros(3000,1);
 
-range = 60:120;
+range = 80:140;
 
 for gggg=1:size(summary_data.analysis(4).da.c,3)
     
-    lickplus = find(summary_data.analysis(4).plck(range,gggg)>0.8);
-    lickminus = find(summary_data.analysis(4).plck(range,gggg)<0.4);
+    lickplus = find(summary_data.analysis(4).plck(range,gggg)>0.9);
+    lickminus = find(summary_data.analysis(4).plck(range,gggg)<0.2);
 
     switch plot_style
         
@@ -534,8 +526,8 @@ for gggg=1:size(summary_data.analysis(4).da.c,3)
             summary_data.analysis(4).da_lickplus = [summary_data.analysis(4).da_lickplus mean(summary_data.analysis(4).da.c(range(lickplus),:,gggg),1)'];
             summary_data.analysis(4).da_lickminus = [summary_data.analysis(4).da_lickminus mean(summary_data.analysis(4).da.c(range(lickminus),:,gggg),1)'];
             if gggg == size(summary_data.analysis(4).da.c,3)
-                shadedErrorBar(-1599:1400,mean(summary_data.analysis(4).da_lickplus,2,'omitnan'),std(summary_data.analysis(4).da_lickplus,[],2,'omitnan')./sqrt(gggg),{'color',[0 0.67 1]}); hold on;
-                shadedErrorBar(-1599:1400,mean(summary_data.analysis(4).da_lickminus,2,'omitnan'),std(summary_data.analysis(4).da_lickminus,[],2,'omitnan')./sqrt(gggg),{'color',[1 0 0]}); hold on;
+                shadedErrorBar(-1599:1400,mean(summary_data.analysis(4).da_lickplus,2,'omitnan'),std(summary_data.analysis(4).da_lickplus,[],2,'omitnan')./sqrt(size(summary_data.analysis(4).da.c,3)),{'color',[0 0.67 1]}); hold on;
+                shadedErrorBar(-1599:1400,mean(summary_data.analysis(4).da_lickminus,2,'omitnan'),std(summary_data.analysis(4).da_lickminus,[],2,'omitnan')./sqrt(size(summary_data.analysis(4).da.c,3)),{'color',[1 0 0]}); hold on;
             end
     end
     box off; xlabel('Time from reward (ms)'); ylabel('Simulated DA resp. (au)');
@@ -614,7 +606,7 @@ subplot(121);
 plot([-0.5 1.5],[0 0],'k--'); hold on;
 swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.dist(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5],'MarkerEdgeAlpha',0.2);
 plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avg,'ko-','linewidth',4); box off;
-ylabel('Mean PE'); axis([-0.5 1.5 -1 1]);
+ylabel('Mean PE'); axis([-0.5 1.5 -2 2]);
 subplot(122);
 plot([-0.5 1.5],[0 0],'k--'); hold on;
 swarmchart(summary_data.analysis(5).bin_cntrl_LKperPE.g(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt>400),5,[0.5 0.5 0.5],'MarkerEdgeAlpha',0.2);
@@ -622,14 +614,14 @@ plot([0 1],summary_data.analysis(5).bin_cntrl_LKperPE.avgI,'ko-','linewidth',4);
 ylabel('Mean PEI'); axis([-0.5 1.5 -1 2]);
 
 figure(52); clf; subplot(121);
-plot([-1 1],[0 0],'k-'); hold on;
-plot([0 0],[-2 2],'k-');
+plot([-2 3],[0 0],'k-'); hold on;
+plot([0 0],[-1 3],'k-');
 scatter(summary_data.analysis(5).bin_cntrl_LKperPE.dist,summary_data.analysis(5).bin_cntrl_LKperPE.distI,10,'filled','MarkerFaceAlpha',0.25);
-ylabel('PE internal'); xlabel('PE veridical');
+ylabel('PE internal'); xlabel('PE veridical'); box off;
 subplot(122);
 plot([0 800],[0 0],'k-'); hold on;
 scatter(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt,summary_data.analysis(5).bin_cntrl_LKperPE.distI,10,summary_data.analysis(5).bin_cntrl_LKperPE.g,'filled','MarkerFaceAlpha',0.25); colormap([pe_map(end-1,:);pe_map(2,:)]);
-ylabel('PE'); xlabel('trials');
+ylabel('PE'); xlabel('trials'); box off;
 
 [bPE_lminus] = TNC_BinAndMean(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt(summary_data.analysis(5).bin_cntrl_LKperPE.g==0),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.g==0)<0,8);
 [bPE_lplus] = TNC_BinAndMean(summary_data.analysis(5).bin_cntrl_LKperPE.tcnt(summary_data.analysis(5).bin_cntrl_LKperPE.g==1),summary_data.analysis(5).bin_cntrl_LKperPE.distI(summary_data.analysis(5).bin_cntrl_LKperPE.g==1)<0,8);
@@ -648,10 +640,10 @@ pt_on = 1;
 % TUNING UP THE CUE AND REWARD LEARNING RATES
 num_sims    = 36;
 stim_list   = [ -1*ones(1,6) zeros(1,6) ones(1,6) 20*ones(1,6) 21*ones(1,6) 22*ones(1,6) ];
-inits       = repmat([201 132 110 118 204 195],1,6);
-wIn_vec     = ones(1,num_sims);
-tau_vec     = ones(1,num_sims)*2.5;
-sat_vec     = repmat(randperm(6)+4,1,6);
+inits       = repmat(ii([201 130 98 119 141 195]),1,6);
+wIn_vec     = ones(1,num_sims)+0.5;
+tau_vec     = ones(1,num_sims)+1.5;
+sat_vec     = ones(1,num_sims)*8;
 
 clear run;
 

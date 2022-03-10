@@ -47,7 +47,7 @@ pred_da_move_o = [];
 pred_da_sense_u = [];
 pred_da_sense_o = [];
 % DA_trans = cumsum(TNC_CreateGaussian(500,125,1000,1));
-DA_trans = cumsum(TNC_CreateGaussian(700,200,1000,1)) + 0.1;
+DA_trans = cumsum(TNC_CreateGaussian(700,125,1000,1))*3;
 out_scale_da = 100;
 
 clear plot_stats;
@@ -70,10 +70,8 @@ tau         = 30;
 dt_div_tau  = dt/tau;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
-% eta_J       = 2.5e-5 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
-% eta_wIn     = 1./10;     % best data match around 30-40 for tau_trans
-eta_J       = 1e-3 .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
-eta_wIn     = 1./50; % .* tau_trans;     % best data match around 30-40 for tau_trans
+eta_J       = 2e-3;% .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
+eta_wIn     = 1./125 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
@@ -228,7 +226,7 @@ while pass <= 800 % stop when reward collection is very good
 
         % Save predicted error
         err                                     = mean(err_vector);
-        R_curr(curr_cond)                       = mean(err_vector);
+%         R_curr(curr_cond)                       = mean(err_vector);
 
         % Compile conditions
         net_run.cond(curr_cond).out             = outputs;
@@ -242,10 +240,6 @@ while pass <= 800 % stop when reward collection is very good
         net_run.pass(pass).lat(curr_cond)       = median(lat_lck);
         net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime+1) - outputs(rewTime);
         
-        net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
-        net_run.pass(pass).plck = numel(find(anticip_lck>1)) / error_reps;
-        net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
-
 %----------- Use elgibility at time of reward collection
         e = e_store(:,:,round(median(lat_lck)+rewTime));
 
@@ -265,8 +259,10 @@ while pass <= 800 % stop when reward collection is very good
         end
         eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*99.9)+1);
 
-% VERSION W/O adaptive beta component
+% "PHASIC KNOCKOUT" adaptive beta component
 %         eta_DA_mult = 0;
+% "DA DEPLETION" adaptive beta component
+%         eta_DA_mult = -0.9;
 
         % current reward value normalized over {0,1} like derivative
         curr_val = 1- (1-exp(-(deltaRew)/500));        
@@ -275,12 +271,11 @@ while pass <= 800 % stop when reward collection is very good
         error_c = 0.33*curr_val; % ~2*tau decay of cue eligibility trace
 
 % VERSION WHERE DA==PE
-%         error_r = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*100)+1);        
+%         error_r = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*99.9)+1);        
 %         error_c = 0.33*error_r; % ~2*tau decay of cue eligibility trace
 
         % Performance error for updating RNN
-        R_curr(curr_cond) = error_r;        
-%         PE = error_r;
+        R_curr(curr_cond) = error_r + (sum(abs(diff(outputs(1,500:1600)))) * w_var);        
         PE = R_curr(curr_cond)-R_bar(curr_cond);
 
         net_run.pass(pass).peI   = error_r;
@@ -336,8 +331,7 @@ while pass <= 800 % stop when reward collection is very good
 
 
         % ACTR formulation
-%         delta_J = -eta_J .* e .* PE .* (eta_DA_mult + stim_bonus);
-        delta_J = -eta_J .* e .* PE .* eta_DA_mult;
+        delta_J = -eta_J .* e .* PE .* (stim_bonus + eta_DA_mult);
 % VERSION WHERE DA==PE
 %         delta_J = -eta_J .* e .* PE;
         
@@ -353,8 +347,7 @@ while pass <= 800 % stop when reward collection is very good
 %------------ Calculate the proposed weight changes at inputs
         
         % ACTR formulation
-%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* eta_DA_mult );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
 % VERSION WHERE DA==PE
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
         
@@ -364,10 +357,9 @@ while pass <= 800 % stop when reward collection is very good
             net_out.wIn(net.oUind,2)=0;
         end
         
-        trans_sat_c = trans_sat*0.75;
+        trans_sat_c = trans_sat;
         % ACTR formulation
-%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* eta_DA_mult );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
 % VERSION WHERE DA==PE
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
 
@@ -379,8 +371,12 @@ while pass <= 800 % stop when reward collection is very good
         
 %------------------ Calculate the proposed weight changes at inputs
 
+        net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
+        net_run.pass(pass).plck = numel(find(anticip_lck>1)) / error_reps;
+        net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
+
         a_delta_J(curr_cond) = median(abs(delta_J(:))); % Save magnitude of change    
-        a_sum_err(curr_cond) = err; % Save magnitude of error for this condition   
+        a_sum_err(curr_cond) = R_curr(curr_cond); % Save magnitude of error for this condition
        
         % output the error
         R_bar_prev(curr_cond) = R_bar(curr_cond);
