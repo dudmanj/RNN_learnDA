@@ -277,9 +277,21 @@ end
 global pt_on;
 pt_on = 1;
 
-stim_list = [zeros(1,18) 20*ones(1,18)];
-% inits = repmat(ii([141 159 100 110 104 55]),1,2);
-inits = repmat(ii([141 191 178 110 166 130]),1,6);
+
+% num_sims = 24;
+% stim_list = zeros(1,num_sims);
+% 
+% % inits = repmat([180 123 110 132 171 141],1,6);
+% inits = repmat([201 132 110 118 204 195],1,4);
+% tmp = repmat([0 0.5 1 2],6,1);
+% wIn_vec = tmp(1:numel(tmp));
+% % tmp = repmat([2 4 6 8],6,1);
+% % tau_vec = tmp(1:numel(tmp));
+% tau_vec = ones(1,num_sims)*3;
+% sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
+
+stim_list = [zeros(1,12) 20*ones(1,12)];
+inits = repmat([201 132 110 118 204 195],1,4);
 wIn_vec = repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4);
 tau_vec = repmat([ones(1,6) 1+rand(1,6) ones(1,6)],1,4);
 
