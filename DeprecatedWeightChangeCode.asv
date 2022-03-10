@@ -19,14 +19,14 @@ boxplot([final_latency.daaspe final_latency.deplete final_latency.nophasic final
 ylabel('Final collection latency (ms)');
 
 figure(301); clf;
-bar([1 2 3 4 5],[mean(final_latency.daaspe) mean(final_latency.deplete) mean(final_latency.nophasic) mean(final_latency.beta) mean(final_latency.data)-shift]+shift);
+bar([1 2 3 4 5],[mean(final_latency.daaspe) mean(final_latency.deplete) mean(final_latency.nophasic) mean(final_latency.beta) mean(final_latency.data)-shift]+shift,50);
 hold on;
-swarmchart([ones(1,24) 2*ones(1,24) 3*ones(1,24) 4*ones(1,24) 5*ones(1,numel(final_latency.data))],[final_latency.daaspe final_latency.deplete final_latency.nophasic final_latency.beta final_latency.data-shift]+shift,'k','filled');
+swarmchart([ones(1,24) 2*ones(1,24) 3*ones(1,24) 4*ones(1,24) 5*ones(1,numel(final_latency.data))],[final_latency.daaspe final_latency.deplete final_latency.nophasic final_latency.beta final_latency.data-shift]+shift,'filled');
 ylabel('Final collection latency (ms)');
 
 figure(302);
 [p,atab,stats] = anova1(([final_latency.daaspe' final_latency.deplete' final_latency.nophasic' final_latency.beta']));
-[c,m,h,nms] = multcompare(stats,'display','on')
+[c,m,h,nms] = multcompare(stats,'display','off')
 
 % [p,h] = ranksum(final_latency.nobeta', final_latency.beta')
 

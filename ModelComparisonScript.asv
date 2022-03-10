@@ -8,58 +8,16 @@ global pt_on;
 pt_on = 1;
 
 % Code to run simulation and display key output measures:
-
-% stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
-% % inits = repmat(ii([141 159 166 176 191 150]),1,6);
-% inits = repmat(ii([141  96 100 110 104  55]),1,6);
-% inits = repmat(ii([141 159 166 176 191 150]),1,6);
-
-% stim_list = [-1*ones(1,18) zeros(1,18) ones(1,18) 20*ones(1,18) 21*ones(1,6) 22*ones(1,6)];
-% inits = repmat(ii([141 123 159 110 166 132]),1,14);
-% wIn_vec = [repmat([zeros(1,6) zeros(1,6) ones(1,6)*0.33],1,4) zeros(1,12)];
-% tau_vec = [repmat([ones(1,6) ones(1,6)*1.5 ones(1,6)],1,4) ones(1,12)];
-% clear run;
-% num_sims = 50;
-% num_sims = 36;
-
-% TUNING UP THE CUE AND REWARD LEARNING RATES
-% stim_list = zeros(1,num_sims);
-% inits = repmat(ii([141 123 159 110 166 132 171 180 118 100+randperm(100,9)]),1,2);
-% inits = ii(100+randperm(100,num_sims));
-
-% inits = ones(1,num_sims).*ii(141); % good
-% inits = ones(1,num_sims).*ii(123); % good
-% inits = ones(1,num_sims).*ii(110); % good
-% inits = ones(1,num_sims).*ii(171); % pretty good
-% inits = ones(1,num_sims).*ii(132); % good
-% inits = ones(1,num_sims).*ii(180); % pretty good
-
-% inits = repmat(ii([141 123 110 132 171 180]),1,6);
-% wIn_vec = [rand(1,num_sims)+0.5];
-% tau_vec = [rand(1,num_sims)+1];
-% wIn_vec = repmat([rand(1,6).*2],1,6);
-% tau_vec = [1.1:0.1:1.9];
-% tmp = repmat([1:0.2:2],6,1);
-% tau_vec = tmp(1:numel(tmp));
-% sat_vec = repmat(randperm(6)+4,1,6);
-% wIn_vec = [zeros(1,num_sims)];
-% tau_vec = [ones(1,num_sims)];
-
-% tmp = repmat([1.5 2 2.5],6,1);
-% tau_vec = tmp(1:numel(tmp));
-% sat_vec = ones(1,6)*10;
-
 num_sims = 24;
 stim_list = zeros(1,num_sims);
 
-% inits = repmat([180 123 110 132 171 141],1,6);
-inits = repmat([201 132 110 118 204 195],1,4);
-tmp = repmat([0 0.5 1 2],6,1);
+% inits = repmat(ii([201 132 110 118 141 195]),1,4);
+inits = repmat(ii([201 130 98 119 141 195]),1,4);
+tmp = repmat([1 1.25 1.5 1.75],6,1);
 wIn_vec = tmp(1:numel(tmp));
-% tmp = repmat([2 4 6 8],6,1);
-% tau_vec = tmp(1:numel(tmp));
-tau_vec = ones(1,num_sims)*3;
-sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
+% tau_vec = ones(1,num_sims)*2;
+tau_vec = tmp(1:numel(tmp))+1;
+% sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
 clear run;
 
@@ -88,9 +46,10 @@ parfor g = 1:numel(stim_list)
 end
 
 % save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-NOBeta run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-WithBeta run stim_list inits
-% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-base-DaIsPE run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-PhasicKO run stim_list inits
+save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-DADeplete run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-WithBeta run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-DaIsPE run stim_list inits
 % save ~/_PROJECTS/Luke-LearnDA/run-ctrl run stim_list inits
 
 %% LAST BITS NEEDED FOR PAPER FIGURES
@@ -132,9 +91,9 @@ hold on; plot(trans_vec,react_sm);
 
 %% 0.5 Compute full error surface
 s_map = TNC_CreateRBColormap(1000,'cpb');
-trans_vec = -0.5:0.5:11;
+trans_vec = 0:0.5:11;
 sust_vec = -0.25:0.05:1;
-reps=1:100;
+reps=1:50;
 lat = zeros(numel(sust_vec),numel(reps));
 lat_mat = zeros(numel(sust_vec),numel(trans_vec));
 cost_mat = zeros(numel(sust_vec),numel(trans_vec));
@@ -164,8 +123,8 @@ end
 %     cost_mat(:,tt) = sgolayfilt(cost_mat(:,tt),3,11);
 % end
 
-trans_axis = [ones(1,1)*react_sm(1) react_sm']-100;
-sust_axis = sust_vec*6;
+trans_axis = [react_sm']-100;
+sust_axis = sust_vec*8;
 % sust_axis = sust_axis-min(sust_axis);
 
 x = reshape(sust_axis'*ones(size(trans_axis)),numel(cost_mat),1);
@@ -195,7 +154,7 @@ box on;
 
 %% 1. Plot Cost vs Ant vs React for all Cntrl model sims
 clear summary_data
-cmap = TNC_CreateRBColormap(6,'gp');
+cmap = TNC_CreateRBColormap(6,'mapb');
 cmap2 = repmat(cmap(1:6,:),3,1);
 fOff = 200; % for when rand wIn init is used
 figure(1+fOff); clf;
@@ -219,10 +178,11 @@ for g=1:numel(run)
             else
                 summary_data.analysis(1).lat(scnt,cnt) = 1400;
             end
-            summary_data.analysis(1).cost(scnt,cnt) = 1-exp(-summary_data.analysis(1).lat(scnt,cnt)/500);
-            summary_data.analysis(1).rct(scnt,cnt) = react_model(run(g).output.pass(gg).chk.npi(1605))+50;
+            summary_data.analysis(1).cost(scnt,cnt)     = 1-exp(-summary_data.analysis(1).lat(scnt,cnt)/500);
+            summary_data.analysis(1).rct(scnt,cnt)      = react_model(run(g).output.pass(gg).chk.npi(1605))+50;
+%             summary_data.analysis(1).ant(scnt,cnt)      = numel(find(run(g).output.pass(gg).chk.v > 1100 & run(g).output.pass(gg).chk.v > 1600));
+            summary_data.analysis(1).outs(scnt,:,cnt)   = run(g).output.pass(gg).chk.o;
             summary_data.analysis(1).ant(scnt,cnt) = run(g).output.pass(gg).anticip;
-%             summary_data.analysis(1).ant(scnt,cnt) = numel(find(unique(run(g).output.pass(gg).chk.v)>600 & unique(run(g).output.pass(gg).chk.v)<1600));
 
             label_txt{scnt} = [num2str(inits(g)) '-' num2str(tau_vec(g),2) '-' num2str(wIn_vec(g),1)];
 
@@ -232,15 +192,16 @@ for g=1:numel(run)
 
 % METHOD FOR COMPUTING LEARNING TRAJECTORIES
         summary_data.analysis(1).ant(scnt,:) = sgolayfilt(summary_data.analysis(1).ant(scnt,:),3,11);
-        trial_rng = 120:160; % (i.e. 600 - 800)
+        trial_rng = 140:160; % (i.e. 600 - 800)
+
         % Compute offset for fitting exponential
-        trans_off = median(summary_data.analysis(1).rct(scnt,trial_rng));
-        sust_off = median(summary_data.analysis(1).ant(scnt,trial_rng));
-        lat_off = median(summary_data.analysis(1).lat(scnt,trial_rng));
+        trans_off = mean(summary_data.analysis(1).rct(scnt,trial_rng));
+        sust_off = mean(summary_data.analysis(1).ant(scnt,trial_rng));
+        lat_off = mean(summary_data.analysis(1).lat(scnt,trial_rng));
         
         % Fit an exponential to the data
         trial_rng = 1:161;
-        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-sust_off -0.5 -sust_off -0.5],'Upper',[0 +0.05 0 +0.05]);    
+        sustained_model = fit( trial_rng' , summary_data.analysis(1).ant(scnt,:)'-sust_off,'exp2','Lower',[-6 -0.1 -6 -0.1],'Upper',[0 +0.05 0 +0.05]);    
         transient_model = fit( trial_rng' , summary_data.analysis(1).rct(scnt,:)'-trans_off,'exp2','Lower',[50 -0.05 50 -0.5],'Upper',[500 0 500 0]);
         latency_model = fit( trial_rng' , summary_data.analysis(1).lat(scnt,:)'-lat_off,'exp2','Lower',[-5 -0.05 -5 -0.5],'Upper',[1000 0 1000 0]);
         
@@ -250,18 +211,23 @@ for g=1:numel(run)
         
         figure(2);
         total_sims = sum(stim_list==0);
-        subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 41 0 500]); axis off;
-        subplot(total_sims,3,((find(inds==scnt)-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]); axis off;
-        subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis tight; axis off;
+%         subplot(total_sims,3,((find(inds==scnt)-1)*3)+1); plot(summary_data.analysis(1).rct(scnt,:)); hold on; plot(transient_sm,'linewidth',3); axis([0 41 0 500]); axis off;
+%         subplot(total_sims,3,((find(inds==scnt)-1)*3)+2); plot(summary_data.analysis(1).ant(scnt,:)); hold on; plot(sustained_sm,'linewidth',3); axis([0 161 0 8]); axis off;
+%         subplot(total_sims,3,((find(inds==scnt)-1)*3)+3); plot(summary_data.analysis(1).lat(scnt,:)); hold on; plot(latency_sm,'linewidth',3); axis tight; axis off;
+        subplot(1,3,1); plot(transient_sm,'linewidth',find(wIn_vec(g)==unique(wIn_vec)),'color',cmap(find(inits(g)==inits(1:6)),:)); axis([0 41 50 400]); hold on;
+        subplot(1,3,2); plot(sustained_sm,'linewidth',find(wIn_vec(g)==unique(wIn_vec)),'color',cmap(find(inits(g)==inits(1:6)),:)); axis([0 161 0 8]); hold on;
+        subplot(1,3,3); plot(log10(latency_sm),'linewidth',find(wIn_vec(g)==unique(wIn_vec)),'color',cmap(find(inits(g)==inits(1:6)),:)); axis([0 161 1.8 3.2]); hold on;
         
-        
+        summary_data.analysis(1).final_lat(scnt) = lat_off
+        summary_data.analysis(1).init_id(scnt) = find(inits(g)==unique(inits));
+
         figure(2+fOff);
         plot3(sustained_sm,transient_sm,log10(latency_sm),'k-','linewidth',1.5); hold on;
             view(48,30);
             % set(gca,'YDir','reverse');
             set(gca,'Color',[0.95 0.95 0.95]);
             box on; 
-            axis([-2 8 50 375 1.75 3.25]);
+            axis([0 6 75 350 1.75 3.1]);
 
         figure(1+fOff);
         if scnt==1    
@@ -285,7 +251,7 @@ for g=1:numel(run)
             % plot3(sustained_sm,transient_sm,log(latency_sm),'-','linewidth',2,'color','k'); hold on;
             % plot3(sustained_sm,transient_sm,1-exp(-latency_sm/500),'-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',cmap2(scnt,:)); hold on;
-            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5); hold on;
+            plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm+100)+0.01,'w-','linewidth',1.5); hold on;
 %         else
 %             plot3(sustained_sm,transient_sm,cost_surf_sims(sustained_sm,transient_sm)+0.01,'w-','linewidth',1.5,'color',[0.85 0.85 0.85]); hold on;
 %         end
@@ -295,7 +261,7 @@ for g=1:numel(run)
             ylabel('Reactive');
             xlabel('Anticipatory');
             zlabel('Cost');
-            axis([-2 5.2 65 300 0 0.7]);
+            axis([-1 6 50 650 0.2 1]);
             drawnow;
 
 
@@ -384,15 +350,15 @@ for g=1:numel(run)
 end
 
 %% 3. RPE predictions
-clear summary_data;
+% clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
 t=1:3000;
 kern = [zeros(1,3000) exp(-t/jrcamp_tau)];
 kern=kern/trapz(kern);
-s_scl = 3;
-m_scl = 0.5;
+s_scl = 2;
+m_scl = 1;
 cnt = 1;
 
 cue_win = 100:600;
@@ -439,7 +405,7 @@ figure(32); clf;
 subplot(121);
 plot([0 800],[0 0],'k--'); hold on;
 errorbar(0:100:700,[mean(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1)) mean(summary_data.analysis(3).DA_resp.c_cue_bin,2)'],[std(mean(summary_data.analysis(3).DA_resp.c_cue_int(5:10,:),1),[],2) std(summary_data.analysis(3).DA_resp.c_cue_bin,[],2)'./sqrt(numel(init_choice))],'ro-','linewidth',3);
-axis([0 800 -0.1 0.6]);
+axis([0 800 -0.2 1.2]);
 box off; xlabel('Training trials'); ylabel('Simulated cued DA resp. (au)')
 subplot(122);
 plot([0 810],[0 0],'k-.'); hold on;
@@ -451,7 +417,7 @@ xxx = mean(summary_data.analysis(3).DA_resp.o_rew_bin,2);
 % yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2)./sqrt(size(summary_data.analysis(3).DA_resp.c_rew_bin,2));
 yyy = std(summary_data.analysis(3).DA_resp.o_rew_bin,[],2);
 errorbar(100:100:700,xxx(1:7),yyy(1:7),'bo-','linewidth',3); hold on;
-axis([0 810 -0.25 2.5]); 
+axis([0 810 -0.5 5]); 
 box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 % Compute reward responses for cntrl, uncued, omit same 100 trial bins
@@ -459,7 +425,7 @@ box off; xlabel('Training trials'); ylabel('Simulated reward DA resp. (au)')
 
 figure(31); clf;
 
-stable_trial_range = 80:140;
+stable_trial_range = 140:160;
 
 summary_data.analysis(3).DA_resp.c_avg = mean(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),3);
 summary_data.analysis(3).DA_resp.c_sem = std(mean(summary_data.analysis(3).da.c(stable_trial_range,:,:),1),[],3)./ sqrt(size(summary_data.analysis(3).da.c,3)); % 
@@ -475,7 +441,7 @@ shadedErrorBar(-1599:1400,summary_data.analysis(3).DA_resp.c_avg,summary_data.an
 shadedErrorBar(-1599:1400,summary_data.analysis(3).DA_resp.u_avg,summary_data.analysis(3).DA_resp.c_sem,{'color',[0 0 0]}); hold on;
 plot([-1599 1400],[0 0],'k-.'); hold on;
 xlabel('Time from reward (ms)'); ylabel('ACTR predicted DA response (au)');
-axis([-1600 1400 -1e-3 7.5e-3]); box off;
+axis([-1600 1400 -5e-3 15e-3]); box off;
 
 figure(33); clf;
 % plot average traces over example intervals:
@@ -491,7 +457,7 @@ for egs_da=1:3
         plot(-1599:1400,tmp_da,'color',[0.5 0.5 0.5 0.5]); hold on;
     end
     plot(-1599:1400, mean( mean(summary_data.analysis(3).da.c(ranges(egs_da,:),:,:),1) ,3) ,'color',[0 0 0],'linewidth',2); hold on;
-    axis([-1600 1400 -1e-3 8e-3]); box off;
+    axis([-1600 1400 -1e-3 12e-3]); box off;
 end
 
 %% 4. Compare DA responses on lick+ and lick- trials predictions
