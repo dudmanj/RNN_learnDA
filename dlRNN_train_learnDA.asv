@@ -278,14 +278,14 @@ while pass <= 800 % stop when reward collection is very good
         PE = R_curr(curr_cond)-R_bar(curr_cond);
 
         net_run.pass(pass).peI   = error_r;
-        anticips = numel(find(outputs_t>1348 & outputs_t<1598));
+        anticips = numel(find(outputs_t>1098 & outputs_t<1598));
         
 %-----------------------------------------------------------------------------------------
 %--------- NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
         switch stim
 
             case -1
-                if error_r>0 & rand(1)<0.6
+                if error_r>0
                     eta_DA_mult = 4; 
                 else
                     eta_DA_mult = eta_DA_mult-0.75;                     
@@ -303,23 +303,28 @@ while pass <= 800 % stop when reward collection is very good
                 
             case 20
                 if error_r<0
-                    eta_DA_mult = 12;                    
-                    error_r = 1;
-                    error_c = 0.5;
+                    eta_DA_mult = 4.5;                    
+                    error_c = 1;
                 else
-                    eta_DA_mult = eta_DA_mult;                     
+                    eta_DA_mult = eta_DA_mult-0.75;                     
                 end
 
             case 21
                 if error_r<0
-                    error_r = 1;
-                    error_c = 1;
+                    eta_DA_mult = 4.5;                    
+                    error_r = error_r + 1;
+                    error_c = error_c + 0.33;
+                else
+                    eta_DA_mult = eta_DA_mult-0.75;                     
                 end
 
             case 22
-                if error_r>0 & rand(1)<0.6
-                    error_r = 1;
-                    error_c = 1;
+                if error_r>0
+                    eta_DA_mult = 4.5;                    
+                    error_r = error_r + 1;
+                    error_c = error_c + 0.33;
+                else
+                    eta_DA_mult = eta_DA_mult-0.75;                     
                 end
                 
         end
@@ -343,7 +348,7 @@ while pass <= 800 % stop when reward collection is very good
 %-----------------------------------------------------------------------------------------
 %--------- COMPUTE the proposed weight changes at INPUTS        
         % ACTR formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (0.1+trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* eta_DA_mult);
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* (error_r*(error_r>0)) .* (stim_bonus + eta_DA_mult) ) + ( net_out.wIn(net.oUind,2) .* eta_wIn .* (error_r*(error_r<0)) .* (stim_bonus + eta_DA_mult) );
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
 %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
@@ -359,7 +364,7 @@ while pass <= 800 % stop when reward collection is very good
         
         trans_sat_c = trans_sat;
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (0.1+trans_sat_c-net_out.wIn(net.oUind,1)) * eta_wIn .* error_c .* eta_DA_mult ); 
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( eta_wIn .* error_c .* eta_DA_mult ); 
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
 %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
 
@@ -461,9 +466,9 @@ while pass <= 800 % stop when reward collection is very good
                 err_vector(qq) = err;
                 err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var);
                 err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
-                anticip_lck(qq) = numel(find(outputs_t<rewTime & outputs_t>500));
-                    anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime & outputs_t_o>500));
-                    anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime & outputs_t_u>500));
+                anticip_lck(qq) = numel(find(outputs_t<rewTime & outputs_t>600));
+                    anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime & outputs_t_o>600));
+                    anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime & outputs_t_u>600));
                 lat_lck(qq) = deltaRew;
                     lat_lck_o(qq) = deltaRew_o;
                     lat_lck_u(qq) = deltaRew_u;

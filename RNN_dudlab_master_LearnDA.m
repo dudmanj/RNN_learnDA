@@ -487,7 +487,7 @@ for jj=1:generations
     % make sure require net to amplify sensory inputs
 %     net.wIn(net.oUind,1) = 0.5;
 %     net.wIn(net.oUind,2) = 1;
-    net.wIn(net.oUind,1) = 0;
+    net.wIn(net.oUind,1) = 5;
     net.wIn(net.oUind,2) = 0;
 
 
@@ -523,6 +523,12 @@ for jj=1:generations
     gens.dets(jj).err = test_error;
     gens.dets(jj).out = mean(export_outputs,1);
 
+
+    net.wIn(net.oUind,1) = 0;
+    net.wIn(net.oUind,2) = 0;
+    [test_error,export_outputs,hidden_r,lag,err_ant,ant_lck] = dlRNN_evolve(net,input,target,act_func_handle,learn_func_handle,transfer_func_handle,50);
+    evol.outI(jj,:) = mean(export_outputs,1);
+    
 end
 
 %% Plot output of the evolved networks
@@ -537,11 +543,13 @@ end
 [bb,ii]=sort(evol.err);
 [bbb,iii]=sort(evol.lag);
 
-figure(9); subplot(1,6,1:2); imagesc(evol.out(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
-subplot(1,6,3); plot(evol.lag(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Collect latency');
-subplot(1,6,4); plot(evol.p(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Sparsity');
-subplot(1,6,5); semilogx(evol.g(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('g');
-subplot(1,6,6); plot(abs(evol.eig(ii)),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('eig'); set(gca,'TickDir','out');
+figure(9); 
+subplot(1,6,1:3); imagesc(evol.out(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
+subplot(1,6,4:6); imagesc(evol.outI(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
+% subplot(1,6,3); plot(evol.lag(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Collect latency');
+% subplot(1,6,4); plot(evol.p(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Sparsity');
+% subplot(1,6,5); semilogx(evol.g(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('g');
+% subplot(1,6,6); plot(abs(evol.eig(ii)),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('eig'); set(gca,'TickDir','out');
 
 
 figure(8); clf;

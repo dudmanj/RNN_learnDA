@@ -1,5 +1,5 @@
 
-load ~/'Dropbox (HHMI)'/matlab.mat
+load ~/'Dropbox (HHMI)'/matlab-common-init.mat
 % load ~/'Dropbox (HHMI)'/run.mat
 % load ~/'Dropbox (HHMI)'/cued-da-run.mat
 
@@ -367,16 +367,25 @@ axis([50 750 -0.5 3]);
 figure(13); clf;
 subplot(211); % calibrated prediction
 td_da_predict = zeros(1,3000);
-td_da_predict(100:100:3000) = [0 diff(sim_summary.critic(1).v)];
+val_func = [0 diff(sim_summary.critic(1).v)];
+td_da_predict(100:100:2500) = val_func(6:end);
 td_da_predict = conv(td_da_predict,kern,'same');
-plot(-1599:1400,td_da_predict,'--','color',colors(1)); hold on;
-plot(-1599:1400,
+plot(-1599:1400,td_da_predict,'--','color',colors(1,:),'linewidth',2); hold on;
+plot(-1599:1400,mean(tmp_actr_cal(120:160,:)),'-','color',colors(1,:),'linewidth',2); hold on;
+axis([-1500 1500 -2.5e-3 2.5e-3]); box off;
 
 subplot(212); % supra prediction
+td_da_predict = zeros(1,3000);
+val_func = [0 diff(sim_summary.critic(2).v)];
+td_da_predict(100:100:2500) = val_func(6:end);
+td_da_predict = conv(td_da_predict,kern,'same');
+plot(-1599:1400,td_da_predict,'--','color',colors(3,:),'linewidth',2); hold on;
+plot(-1599:1400,mean(tmp_actr_sup(120:160,:)),'-','color',colors(3,:),'linewidth',2); hold on;
+axis([-1500 1500 -2.5e-3 2.5e-3]); box off;
 
 
 %% 3. RPE predictions
-% clear summary_data;
+clear summary_data;
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
 jrcamp_tau = 500;
@@ -413,7 +422,7 @@ end
 % 3.5 Plotting RPE comparisons
 
 % init_choice = randperm(18,9);
-init_choice = 1:numel(run);
+init_choice = 1:numel(find(stim_list==0));
 % init_choice = [3:6:21];
 
 for qq=1:7 % hundred trial bins
@@ -660,16 +669,22 @@ global pt_on;
 pt_on = 1;
 
 % TUNING UP THE CUE AND REWARD LEARNING RATES
-num_sims    = 36;
-stim_list   = [ -1*ones(1,6) zeros(1,6) ones(1,6) 20*ones(1,6) 21*ones(1,6) 22*ones(1,6) ];
-inits       = repmat(ii([201 130 98 119 141 195]),1,6);
-wIn_vec     = ones(1,num_sims)+0.5;
-tau_vec     = ones(1,num_sims)+1.5;
-sat_vec     = ones(1,num_sims)*8;
+num_sims    = 72;
+stim_list   = [ -1*ones(1,12) zeros(1,12) ones(1,12) 20*ones(1,12) 21*ones(1,12) 22*ones(1,12) ];
+inits       = repmat(ii([201 130 98 119 141 195]),1,12);
+% inits       = repmat(ii([108 119 124 115 109 104]),1,6);
+% tmp = repmat([2 2],18,1);
+% wIn_vec = tmp(1:numel(tmp));
+% tau_vec = tmp(1:numel(tmp))+1;
+sat_vec     = repmat(ones(1,6)+6,1,12);
+wIn_vec     = repmat(ones(1,6)+2,1,12);
+% tau_vec     = repmat(ones(1,6),1,12);
+tau_vec     = repmat(rand(1,6)+0.5 ,1,12);
+% sat_vec     = repmat(randperm(6)+4,1,9);
 
 clear run;
 
-parfor g = 1:numel(stim_list)
+parfor g = 1:num_sims
 
     net_init = gens.dets(inits(g)).net % diverse initial states                
     net_init.wIn(net.oUind,:) = [0 wIn_vec(g)];
@@ -692,11 +707,11 @@ parfor g = 1:numel(stim_list)
 
 end
 
-% save ~/'Dropbox (HHMI)'/run-stim run stim_list inits
+% save ~/'Dropbox (HHMI)'/run-stim2 run stim_list inits
 
-%% 6.5 DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
+% 6.5 DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
-clear summary_data;
+% clear summary_data;
 
 % Also need to add in 21 and 22 conditions (critic only predictions)
 stim_map = [[57 181 74] ; [102 45 145 ] ; [158 31 99] ]/255;
@@ -709,6 +724,7 @@ s_scl = 1;
 m_scl = 1;
 
 cue_win = 100:600;
+rew_win = 1600:2100;
 
 SMcnt = 1;
 CTRLcnt = 1;
@@ -731,6 +747,8 @@ for g=1:numel(run)
                 
                 % quantify cue response
                 summary_data.analysis(6).stimMinus.c_cue_int(ggg,SMcnt) = trapz( summary_data.analysis(6).stimMinus.da(ggg,cue_win,SMcnt) );
+                % quantify rew response
+                summary_data.analysis(6).stimMinus.c_rew_int(ggg,SMcnt) = trapz( summary_data.analysis(6).stimMinus.da(ggg,rew_win,SMcnt) );
 
             end
             
@@ -739,6 +757,8 @@ for g=1:numel(run)
 
                 summary_data.analysis(6).stimMinus.lat(tcnt,SMcnt) = run(g).output.pass(gg).lat;
                 summary_data.analysis(6).stimMinus.ant(tcnt,SMcnt) = run(g).output.pass(gg).anticip;
+                summary_data.analysis(6).stimMinus.pei(tcnt,SMcnt) = run(g).output.pass(gg).peI;
+                summary_data.analysis(6).stimMinus.o(tcnt,SMcnt)    = mean(run(g).output.pass(gg).chk.o(1000:1599));
 %                 summary_data.analysis(6).stimMinus.ant(tcnt,SMcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
                 
                 tmp_lk = zeros(1,3000);
@@ -760,6 +780,8 @@ for g=1:numel(run)
                 
                 % quantify cue response
                 summary_data.analysis(6).cntrl.c_cue_int(ggg,CTRLcnt) = trapz( summary_data.analysis(6).cntrl.da(ggg,cue_win,CTRLcnt) );
+                % quantify rew response
+                summary_data.analysis(6).cntrl.c_rew_int(ggg,CTRLcnt) = trapz( summary_data.analysis(6).cntrl.da(ggg,rew_win,CTRLcnt) );
 
             end
             
@@ -768,7 +790,9 @@ for g=1:numel(run)
 
                 summary_data.analysis(6).cntrl.lat(tcnt,CTRLcnt) = run(g).output.pass(gg).lat;
                 summary_data.analysis(6).cntrl.ant(tcnt,CTRLcnt) = run(g).output.pass(gg).anticip;
-%                 summary_data.analysis(6).cntrl.ant(tcnt,CTRLcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
+                summary_data.analysis(6).cntrl.pei(tcnt,CTRLcnt) = run(g).output.pass(gg).peI;
+                summary_data.analysis(6).cntrl.o(tcnt,CTRLcnt) = mean(run(g).output.pass(gg).chk.o(1000:1599));
+                summary_data.analysis(6).cntrl.antC(tcnt,CTRLcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
                 
                 tmp_lk = zeros(1,3000);
                 tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
@@ -789,6 +813,8 @@ for g=1:numel(run)
                 
                 % quantify cue response
                 summary_data.analysis(6).stimPlus.c_cue_int(ggg,SPcnt) = trapz( summary_data.analysis(6).stimPlus.da(ggg,cue_win,SPcnt) );
+                % quantify rew response
+                summary_data.analysis(6).stimPlus.c_rew_int(ggg,SPcnt) = trapz( summary_data.analysis(6).stimPlus.da(ggg,rew_win,SPcnt) );
 
             end
             
@@ -797,7 +823,8 @@ for g=1:numel(run)
 
                 summary_data.analysis(6).stimPlus.lat(tcnt,SPcnt) = run(g).output.pass(gg).lat;
                 summary_data.analysis(6).stimPlus.ant(tcnt,SPcnt) = run(g).output.pass(gg).anticip;
-%                 summary_data.analysis(6).stimPlus.ant(tcnt,SPcnt) = numel(find(run(g).output.pass(gg).chk.v>600 & run(g).output.pass(gg).chk.v<1600));
+                summary_data.analysis(6).stimPlus.pei(tcnt,SPcnt) = run(g).output.pass(gg).peI;
+                summary_data.analysis(6).stimPlus.o(tcnt,SPcnt) = mean(run(g).output.pass(gg).chk.o(1000:1599));
                 
                 tmp_lk = zeros(1,3000);
                 tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
@@ -825,10 +852,12 @@ for g=1:numel(run)
 
                 summary_data.analysis(6).stimPlusPlus.lat(tcnt,SPPcnt) = run(g).output.pass(gg).lat;
                 summary_data.analysis(6).stimPlusPlus.ant(tcnt,SPPcnt) = run(g).output.pass(gg).anticip;
+                summary_data.analysis(6).stimPlusPlus.o(tcnt,SPcnt) = mean(run(g).output.pass(gg).chk.o(1000:1599));
                 
                 tmp_lk = zeros(1,3000);
                 tmp_lk(unique(run(g).output.pass(gg).chk.v)) = 1;
                 summary_data.analysis(6).stimPlusPlus.lk(tcnt,:,SPPcnt) = conv(tmp_lk,lk_kern,'same');
+                summary_data.analysis(6).stimPlusPlus.antC(tcnt,SPcnt) = max( summary_data.analysis(6).stimPlusPlus.lk(tcnt,:,SPPcnt) )
                 
                 tcnt=tcnt+1;
                 
@@ -896,6 +925,156 @@ for g=1:numel(run)
 
 end
 
+% 6.75 Plot the various figure panels for stimLick experiments
+
+% Model overview
+    figure(600); clf;
+
+    subplot(221);
+    plot([1 5:5:800],mean(summary_data.analysis(6).cntrl.ant,2),'k');
+    hold on;    
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimMinus.ant,2),'color',stim_map(1,:));
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimPlus.ant,2),'-','color',stim_map(2,:));
+%     plot([1 5:5:800],mean(summary_data.analysis(6).stimPlusPlus.ant,2),'--','color',stim_map(3,:));
+ylabel('Anticipatory licking')
+
+    subplot(222);
+    plot([1 5:5:800],mean(summary_data.analysis(6).cntrl.c_cue_int,2),'k');
+    hold on;    
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimMinus.c_cue_int,2),'color',stim_map(1,:));
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimPlus.c_cue_int,2),'-','color',stim_map(2,:));
+ylabel('Cued DA response')
+
+    subplot(223);
+    plot([1 5:5:800],mean(summary_data.analysis(6).cntrl.pei,2),'k');
+    hold on;    
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimMinus.pei,2),'color',stim_map(1,:));
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimPlus.pei,2),'-','color',stim_map(2,:));
+ylabel('Error_r')
+
+subplot(224);
+    plot([1 5:5:800],mean(summary_data.analysis(6).cntrl.o,2),'k-','linewidth',2);
+    hold on;    
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimMinus.o,2),'-','color',stim_map(1,:),'linewidth',2);
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimPlus.o,2),'-','color',stim_map(2,:),'linewidth',2);
+    plot([1 5:5:800],mean(summary_data.analysis(6).stimPlusPlus.o,2),'-','color',stim_map(3,:),'linewidth',2);
+ylabel('Policy output')
+
+% Figure panels for manuscript:
+figure(601); clf; % cued DA - cntrl & cued lick - cntrl, 100 trials bins for StimLick+ / StimLick-
+cntrs = 11:20:151;
+for qq=1:8 % hundred trial bins
+    
+    curr_bin = [-9:10] + cntrs(qq);
+
+    summary_data.analysis(6).lk.cntrl_avg(qq) = mean( mean(summary_data.analysis(6).cntrl.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.cntrlC_avg(qq) = mean( mean(summary_data.analysis(6).cntrl.antC(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.cntrl_sd(qq) = std( mean(summary_data.analysis(6).cntrl.ant(curr_bin,:),1) ,[],2);
+    summary_data.analysis(6).lk.cntrlC_sd(qq) = std( mean(summary_data.analysis(6).cntrl.antC(curr_bin,:),1) ,[],2);
+
+    summary_data.analysis(6).lk.minus_avg(qq) = mean( mean(summary_data.analysis(6).stimMinus.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.minus_sd(qq) = std( mean(summary_data.analysis(6).stimMinus.ant(curr_bin,:),1) ,[],2);
+    summary_data.analysis(6).lk.plus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlus.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.plus_sd(qq) = std( mean(summary_data.analysis(6).stimPlus.ant(curr_bin,:),1) ,[],2);
+
+    summary_data.analysis(6).lk.pplus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlusPlus.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.pplus_sd(qq) = std( mean(summary_data.analysis(6).stimPlusPlus.ant(curr_bin,:),1) ,[],2);
+    
+    summary_data.analysis(6).lk.cminus_avg(qq) = mean( mean(summary_data.analysis(6).critM.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.cminus_sd(qq) = std( mean(summary_data.analysis(6).critM.ant(curr_bin,:),1) ,[],2);
+    summary_data.analysis(6).lk.cplus_avg(qq) = mean( mean(summary_data.analysis(6).critP.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.cplus_sd(qq) = std( mean(summary_data.analysis(6).critP.ant(curr_bin,:),1) ,[],2);
+    
+    summary_data.analysis(6).cueDA.cntrl_avg(qq) = mean( mean(summary_data.analysis(6).cntrl.c_cue_int(curr_bin,:),1) ,2);
+    summary_data.analysis(6).cueDA.cntrl_sd(qq) = std( mean(summary_data.analysis(6).cntrl.c_cue_int(curr_bin,:),1) ,[],2);
+
+    summary_data.analysis(6).cueDA.minus_avg(qq) = mean( mean(summary_data.analysis(6).stimMinus.c_cue_int(curr_bin,:),1) ,2);
+    summary_data.analysis(6).cueDA.minus_sd(qq) = std( mean(summary_data.analysis(6).stimMinus.c_cue_int(curr_bin,:),1) ,[],2);
+    summary_data.analysis(6).cueDA.plus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlus.c_cue_int(curr_bin,:),1) ,2);
+    summary_data.analysis(6).cueDA.plus_sd(qq) = std( mean(summary_data.analysis(6).stimPlus.c_cue_int(curr_bin,:),1) ,[],2);
+
+    summary_data.analysis(6).cueDA.pplus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlusPlus.c_cue_int(curr_bin,:),1) ,2);
+    summary_data.analysis(6).cueDA.pplus_sd(qq) = std( mean(summary_data.analysis(6).stimPlusPlus.c_cue_int(curr_bin,:),1) ,[],2);
+
+    summary_data.analysis(6).cueDA.cminus_avg(qq) = mean( mean(summary_data.analysis(6).critM.c_cue_int(curr_bin,:),1) ,2);
+    summary_data.analysis(6).cueDA.cminus_sd(qq) = std( mean(summary_data.analysis(6).critM.c_cue_int(curr_bin,:),1) ,[],2);
+    summary_data.analysis(6).cueDA.cplus_avg(qq) = mean( mean(summary_data.analysis(6).critP.c_cue_int(curr_bin,:),1) ,2);
+    summary_data.analysis(6).cueDA.cplus_sd(qq) = std( mean(summary_data.analysis(6).critP.c_cue_int(curr_bin,:),1) ,[],2);
+
+
+end
+
+summary_data.analysis(6).lk.minusD_avg = summary_data.analysis(6).lk.minus_avg - summary_data.analysis(6).lk.cntrl_avg;
+summary_data.analysis(6).lk.plusD_avg = summary_data.analysis(6).lk.plus_avg - summary_data.analysis(6).lk.cntrl_avg;
+
+summary_data.analysis(6).cueDA.minusD_avg = summary_data.analysis(6).cueDA.minus_avg - summary_data.analysis(6).cueDA.cntrl_avg;
+summary_data.analysis(6).cueDA.plusD_avg = summary_data.analysis(6).cueDA.plus_avg - summary_data.analysis(6).cueDA.cntrl_avg;
+
+summary_data.analysis(6).lk.cminusD_avg = summary_data.analysis(6).lk.cminus_avg - summary_data.analysis(6).lk.cntrl_avg;
+summary_data.analysis(6).lk.cplusD_avg = summary_data.analysis(6).lk.cplus_avg - summary_data.analysis(6).lk.cntrl_avg;
+
+summary_data.analysis(6).cueDA.cminusD_avg = summary_data.analysis(6).cueDA.cminus_avg - summary_data.analysis(6).cueDA.cntrl_avg;
+summary_data.analysis(6).cueDA.cplusD_avg = summary_data.analysis(6).cueDA.cplus_avg - summary_data.analysis(6).cueDA.cntrl_avg;
+
+figure(601); clf; % cued DA - cntrl & cued lick - cntrl, 100 trials bins for StimLick+ / StimLick-
+subplot(211);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.minusD_avg,summary_data.analysis(6).cueDA.minus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(1,:));
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.plusD_avg,summary_data.analysis(6).cueDA.plus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(2,:));
+axis([0 800 -0.3 0.3]); box off; xlabel('Trials'); ylabel('Cued DA resp. - cntrl (au)');
+
+subplot(212);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.minusD_avg,summary_data.analysis(6).lk.minus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(1,:));
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.plusD_avg,summary_data.analysis(6).lk.plus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(2,:));
+axis([0 800 -2 2]); box off; xlabel('Trials'); ylabel('Cued licks - cntrl (Hz)');
+
+figure(602); clf; % cued DA - cntrl & cued lick - cntrl, 100 trials bins for StimLick+ / StimLick- if DA==PE (case 21 and 22)
+subplot(211);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.cminusD_avg,summary_data.analysis(6).cueDA.cminus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(1,:));
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.cplusD_avg,summary_data.analysis(6).cueDA.cplus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(2,:));
+axis([0 800 -0.3 0.3]); box off; xlabel('Trials'); ylabel('Cued DA resp. - cntrl (au)');
+
+subplot(212);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.cminusD_avg,summary_data.analysis(6).lk.cminus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(1,:));
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.cplusD_avg,summary_data.analysis(6).lk.cplus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(2,:));
+axis([0 800 -2 2]); box off; xlabel('Trials'); ylabel('Cued licks - cntrl (Hz)');
+
+figure(603); clf; % cued DA & cued licking for stim and cntrl over learning, 100 trials bins for Stim++Lick+ (case 20)
+subplot(211);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.cntrl_avg,summary_data.analysis(6).cueDA.cntrl_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color','k');
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.pplus_avg,summary_data.analysis(6).cueDA.pplus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(3,:));
+axis([0 800 -0.1 0.5]); box off; xlabel('Trials'); ylabel('Cued DA resp. (au)');
+
+subplot(212);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.cntrl_avg,summary_data.analysis(6).lk.cntrl_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color','k');
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.pplus_avg,summary_data.analysis(6).lk.pplus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(3,:));
+axis([0 800 1 7]); box off; xlabel('Trials'); ylabel('Cued licks (Hz)');
+
+
+figure(604); clf;
+
+subplot(2,2,1);
+plot(mean(mean(summary_data.analysis(6).stimPlusPlus.da(20:60,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
+plot(mean(mean(summary_data.analysis(6).cntrl.da(20:60,:,:),1),3),'linewidth',2,'color','k'); hold on;
+
+subplot(2,2,2);
+plot(mean(mean(summary_data.analysis(6).stimPlusPlus.da(80:120,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
+plot(mean(mean(summary_data.analysis(6).cntrl.da(80:120,:,:),1),3),'linewidth',2,'color','k'); hold on;
+
+subplot(2,2,3);
+plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(20:60,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
+plot(mean(mean(summary_data.analysis(6).cntrl.lk(20:60,:,:),1),3),'linewidth',2,'color','k'); hold on;
+
+subplot(2,2,4);
+plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(80:120,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
+plot(mean(mean(summary_data.analysis(6).cntrl.lk(80:120,:,:),1),3),'linewidth',2,'color','k'); hold on;
+
+
 %% 6.5 Plot figure panels for comparisons
 
 inds2use = 1:18;
@@ -921,7 +1100,6 @@ for qq=1:9 % hundred trial bins
     summary_data.analysis(6).ant_ctrl.sem(qq) = std(this_bin_avg_ctrl)./sqrt(numel(this_bin_avg_ctrl));
     summary_data.analysis(6).ant_spp.avg(qq) = mean(this_bin_avg_spp);
     summary_data.analysis(6).ant_spp.sem(qq) = std(this_bin_avg_spp)./sqrt(numel(this_bin_avg_spp));
-    
     
     this_bin_da_sm = mean(summary_data.analysis(6).stimMinus.c_cue_int(curr_bin,inds2use),1);
     this_bin_da_sp = mean(summary_data.analysis(6).stimPlus.c_cue_int(curr_bin,inds2use),1);
