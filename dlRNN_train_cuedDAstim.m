@@ -1,4 +1,4 @@
-function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale,trans_sat)
+function [net_run,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_cuedDAstim(net,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,tolerance,tau_trans,stim,filt_scale,trans_sat)
 % note stim is a variable coding for lick- (-1) , no stim (0), lick+ (1)
 global monitor;
 global pt_on;
@@ -32,8 +32,8 @@ global pt_on;
         tmp_gauss = tmp_gauss./integral;
 
         scale_factor = 3;
-        da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.8.*tmp_gauss;
-        da_imp_resp_f_oi = -0.8.*tmp_gauss;                
+        da_imp_resp_f_ei = (da_imp_resp_f_ee.*scale_factor) - 0.9.*tmp_gauss;
+        da_imp_resp_f_oi = -0.9.*tmp_gauss;                
         da_imp_resp_f_ei = da_imp_resp_f_ei * 1.25;
     else
         da_imp_resp_f_ei = da_imp_resp_f_ee;
@@ -46,7 +46,6 @@ pred_da_move_u = [];
 pred_da_move_o = [];
 pred_da_sense_u = [];
 pred_da_sense_o = [];
-% DA_trans = cumsum(TNC_CreateGaussian(500,125,1000,1));
 DA_trans = cumsum(TNC_CreateGaussian(700,125,1000,1))*3;
 out_scale_da = 100;
 
@@ -54,10 +53,9 @@ clear plot_stats;
 pass        = 1;
 stats_cnt   = 1;
 [cm]        = TNC_CreateRBColormap(1024,'rb');
-% cost        = 500;
-cost        = 1;
+cost        = 500;
 w_var       = 0.25;             % relative weighting of cost of variance in output unit activity
-w_var_set   = 0.25;
+w_var_set = 0.25;
 [lck_gauss] = TNC_CreateGaussian(500,25,1000,1);
 
 error_reps  = 1;                % can execute a batch of trials to get estimate of performance
@@ -68,13 +66,15 @@ max_delta_J = 0.01;             % prevent very large weight changes (in practice
 dt          = 1;
 tau         = 30;
 dt_div_tau  = dt/tau;
+% alpha_R     = 0.9;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
-eta_J       = 0.5e-3;% .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
+eta_J       = 2e-3;% .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 eta_wIn     = 1./125 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
 plant_scale = 1; % moving into to plant itself (seems better; but leave this variable temporarily for future)
+
 
 net_run.eta_J = eta_J;
 
@@ -94,6 +94,37 @@ orig_J = net_out.J;
 
 running_bar = []; running_err = []; running_ant = [];  running_lat = [];
 
+% Initialize the critic
+curr_input = input{1};
+critic.rewTime = round(find( [0 diff(curr_input(2,:))]>0 , 1 ) / 100);
+critic.cueTime = 1;
+critic.steps = size(curr_input,2) / 100; % 100 ms long boxcar basis set
+critic.rpe_rew = 0;
+critic.rpe_cue = 0;
+critic.w = zeros(critic.steps,1);
+critic.x = zeros(numel(critic.w),critic.steps);
+            
+for p=critic.cueTime+1:critic.steps
+    critic.x(p,p) = 1;
+end
+
+critic.r = zeros(1,critic.steps);
+critic.d = zeros(1,critic.steps);
+ % No reward actually delivered
+ critic.r(critic.rewTime) = 0;
+ % No reward actually delivered
+critic.v = zeros(1,critic.steps);
+critic.alpha = 0.0005;
+critic.lambda = 1;
+critic.gamma = 1;
+
+% visualize training error:
+latency_cost = cost * (1-exp(-[60:1:1500]/500)');   
+emp_ant_cost = [-58.2970  528.5859  311.1233]; % empirical cost surface derived from simulations
+anticip_cost =  0.33*polyval(emp_ant_cost,0:0.1:9) + ... % component that is effort-like cost
+    cost * 0.36 * exp(-([0:0.1:9]-2)./1.2);    
+tmptmp = (latency_cost*ones(1,numel(anticip_cost)) + (ones(numel(latency_cost),1)*anticip_cost));
+
 % begin run through all input conditions
 target_list = randperm(length(target));
         
@@ -106,58 +137,55 @@ for cond = 1:length(target_list)
     % Run internal model WITHOUT perturbations
     [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(-1,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
         
-            err_vector = zeros(1,error_reps);
-            err_vector_x = zeros(1,error_reps);
-            err_vector_y = 1500*ones(1,error_reps);
-            anticip_lck = zeros(1,error_reps);
-            lat_lck = zeros(1,error_reps);
+    err_vector = zeros(1,error_reps);
+    err_vector_x = zeros(1,error_reps);
+    err_vector_y = 1500*ones(1,error_reps);
+    anticip_lck = zeros(1,error_reps);
+    lat_lck = zeros(1,error_reps);
 
-        for qq=1:error_reps
-            
-            if pt_on
-                % pass combined anticipatory and reactive output through the transfer function
-                net_plant_in = (0.5*outputs) + curr_input(2,:)*net_out.wIn(net.oUind,2) + 10*curr_input(1,:)*net_out.wIn(net.oUind,1);
-                outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
-            else
-                % pass output through the transfer function
-                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
-            end
+    for qq=1:error_reps
 
-            % Calculate error as a function something like:
-            rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
-            tmp = find(outputs_t>rewTime,1);
-            if numel(tmp)==1
-                deltaRew = outputs_t(tmp)-rewTime; % / numel([rewTime:numel(curr_input)]);
-            else
-                deltaRew = size(curr_input,2)-rewTime; % / numel([rewTime:numel(curr_input)]);
-            end
-            
-            err_vector(qq) = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
-            
-            lat_lck(qq) = deltaRew;
-            anticip_lck(qq) = numel(find(outputs_t<rewTime));
-
+        if pt_on
+            % pass combined anticipatory and reactive output through the transfer function
+            net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2);
+            outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));            
+        else
+            % pass output through the transfer function
+            outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale,zeros(1,numel(outputs)));            
         end
 
-            running_ant = [running_ant , mean(anticip_lck)];
-            running_lat = [running_lat , median(lat_lck)];
-            
+        % Calculate error as a function something like:
+        rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
+        tmp = find(outputs_t>rewTime,1);
+        if numel(tmp)==1
+            deltaRew = outputs_t(tmp)-rewTime; % / numel([rewTime:numel(curr_input)]);
+        else
+            deltaRew = size(curr_input,2)-rewTime; % / numel([rewTime:numel(curr_input)]);
+        end
 
+        err_vector(qq) = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
+
+        lat_lck(qq) = deltaRew;
+        anticip_lck(qq) = numel(find(outputs_t<rewTime));
+    end
+
+    running_ant = [running_ant , mean(anticip_lck)];
+    running_lat = [running_lat , median(lat_lck)];
             
     % Save predicted error
-    err                                     = mean(err_vector);
-    R_curr(curr_cond)                       = mean(err_vector);
-    R_bar(curr_cond)                        = R_curr(curr_cond);        
+    err                             = mean(err_vector);
+    R_curr(curr_cond)       = mean(err_vector);
+    R_bar(curr_cond)        = R_curr(curr_cond);        
 
     % Compile conditions
-    net_run.cond(curr_cond).out             = outputs;
-    net_run.cond(curr_cond).e               = e;
-    net_run.cond(curr_cond).hr              = hidden_r;
-    net_run.cond(curr_cond).hx              = hidden_x;
+    net_run.cond(curr_cond).out         = outputs;
+    net_run.cond(curr_cond).e           = e;
+    net_run.cond(curr_cond).hr          = hidden_r;
+    net_run.cond(curr_cond).hx                = hidden_x;
     net_run.pass(pass).err(curr_cond)       = R_curr(curr_cond);
-    net_run.pass(pass).chk(curr_cond).o     = outputs;
-    net_run.pass(pass).anticip(curr_cond)   = mean(anticip_lck);
-    net_run.pass(pass).lat(curr_cond)       = median(lat_lck);
+    net_run.pass(pass).chk(curr_cond).o   = outputs;
+    net_run.pass(pass).anticip(curr_cond) = mean(anticip_lck);
+    net_run.pass(pass).lat(curr_cond)                = median(lat_lck);
     net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime) - outputs(rewTime-1);    
     
     figure(1); 
@@ -174,59 +202,36 @@ if monitor
     figure(12); hold off;
 end
 
-while pass <= 800 % stop when reward collection is very good
 
-    % don't penalize network fluctuations until behavior is already getting pretty good
-    w_var = w_var_set * (1-exp(-pass/500));
+% while test_error > tolerance & pass < 2000 % stop when reward collection is very good
+while pass <= 800 % stop when reward collection is very good
     
     for cond = 1:length(target_list)
     
         curr_cond   = target_list(cond);
-        curr_input  = input{curr_cond};
+        curr_input  = input_omit{curr_cond};
         curr_target = target{curr_cond};
 
         % run model
-        [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);
-
+        [outputs,hidden_r,hidden_x,e,e_store] = dlRNN_engine(net.P_perturb,net_out,curr_input,curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);    
         err_vector = zeros(1,error_reps);
         err_vector_x = zeros(1,error_reps);
         err_vector_y = 1500*ones(1,error_reps);
         anticip_lck = zeros(1,error_reps);
         lat_lck = zeros(1,error_reps);
 
-        for qq=1:error_reps
-            
-
-            if pt_on
-                % pass combined anticipatory and reactive output through the transfer function
-                net_plant_in = (0.5*outputs) + curr_input(2,:)*net_out.wIn(net.oUind,2) + 10*curr_input(1,:)*net_out.wIn(net.oUind,1);
-                outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
-            else
-                % pass output through the transfer function
-                outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);            
-            end
-
-            % Calculate error as a function something like:
-            rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
-            tmp = find(outputs_t>rewTime,1);
-            if numel(tmp)==1
-                deltaRew = (outputs_t(tmp)-rewTime);
-            else
-                deltaRew = size(curr_input,2)-rewTime;
-            end
-            
-            err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
-            
-            err_vector(qq) = err;
-            err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var_set);
-            err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
-            anticip_lck(qq) = numel(find(outputs_t<rewTime));
-            lat_lck(qq) = deltaRew;
-
+        % Calculate error as a function something like:
+        rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
+        if numel(rewTime)==0
+            rewTime = 2999;
         end
 
         % Save predicted error
         err                                     = mean(err_vector);
+%         R_curr(curr_cond)                       = mean(err_vector);
+        R_curr(curr_cond)                       = 0; % no reward
+
+        % Compile conditions
         net_run.cond(curr_cond).out             = outputs;
         net_run.cond(curr_cond).e               = e;
         net_run.cond(curr_cond).hr              = hidden_r;
@@ -238,16 +243,15 @@ while pass <= 800 % stop when reward collection is very good
         net_run.pass(pass).lat(curr_cond)       = median(lat_lck);
         net_run.pass(pass).sens_gain(curr_cond) = outputs(rewTime+1) - outputs(rewTime);
         
-%-----------------------------------------------------------------------------------------
-%----------- EVALUATE elgibility at time of reward collection
+%----------- Use elgibility at time of reward collection
         e = e_store(:,:,round(median(lat_lck)+rewTime));
 
         % Maintain original connectivity sparsity
         e = e';
         e(orig_J == 0) = 0;        
         
-%-----------------------------------------------------------------------------------------
-%----------- COMPUTE DA trans and ERRORS 
+%----------- Computer weight updates
+
         % Using ~DA activity to compute updates (multiply through by derivative of policy during reward delivery component)
         dpolicy = round(out_scale_da.*(outputs(1610) - outputs(1599)));        
         if dpolicy<=1
@@ -256,80 +260,42 @@ while pass <= 800 % stop when reward collection is very good
         if dpolicy>=1000
             dpolicy=1000;
         end
-        eta_DA_mult = 1 + DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*99.9)+1);
-
-                                                                                                            % "PHASIC KNOCKOUT" adaptive beta component
-                                                                                                            %         eta_DA_mult = 1;
-                                                                                                            % "DA DEPLETION" adaptive beta component
-                                                                                                            %         eta_DA_mult = 0.1;
-
+        eta_DA_mult = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*99.9)+1);
+        
         % current reward value normalized over {0,1} like derivative
-        curr_val = 1- (1-exp(-(deltaRew+50)/500));        
+        curr_val = 1- (1-exp(-(deltaRew)/500));        
         pred_val_r = outputs(1599); % predicted value at reward
-        error_r = curr_val-pred_val_r;        
-        error_c = 0.5*error_r; % ~2*tau decay of cue eligibility trace
-
-                                                                                                            % VERSION WHERE DA==PE
-                                                                                                            %         error_r = DA_trans(dpolicy) + DA_trans(floor(net_out.wIn(net.oUind,2)*99.9)+1);        
-                                                                                                            %         error_c = 0.33*error_r; % ~2*tau decay of cue eligibility trace
-
+%         error_r = curr_val-pred_val_r;        
+%         error_c = 0.33*curr_val; % ~2*tau decay of cue eligibility trace
+        error_r = 0; % no reward
+        error_c = 0;
+        
         % Performance error for updating RNN
-        R_curr(curr_cond) = error_r; % + (sum(abs(diff(outputs(1,500:1600)))) * w_var);        
+        R_curr(curr_cond) = error_r + (sum(abs(diff(outputs(1,500:1600)))) * w_var);        
         PE = R_curr(curr_cond)-R_bar(curr_cond);
 
         net_run.pass(pass).peI   = error_r;
-        anticips = numel(find(outputs_t>1348 & outputs_t<1598));
         
-%-----------------------------------------------------------------------------------------
-%--------- NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
+        % NEXT STEP: stim/lick+ or stim/lick- should alter eta_DA_mult
         switch stim
-
-            case -1
-                if error_r>0 & rand(1)<0.6
-                    eta_DA_mult = 4; 
-                else
-                    eta_DA_mult = eta_DA_mult-0.75;                     
-                end
                 
             case 0
-                % do nothing                    
+                stim_bonus = 1;                    
                 
             case 1
-                if error_r<0
-                    eta_DA_mult = 4;                    
-                else
-                    eta_DA_mult = eta_DA_mult-0.75;                     
-                end
+                stim_bonus = 4;                    
                 
             case 20
-                if error_r<0
-                    eta_DA_mult = 12;                    
-                    error_r = 1;
-                    error_c = 0.5;
-                else
-                    eta_DA_mult = eta_DA_mult;                     
-                end
-
-            case 21
-                if error_r<0
-                    error_r = 1;
-                    error_c = 1;
-                end
-
-            case 22
-                if error_r>0 & rand(1)<0.6
-                    error_r = 1;
-                    error_c = 1;
-                end
+                stim_bonus = 4;
+                error_c = 0.1;
                 
+            otherwise
+                stim_bonus = stim;
+                    
         end
 
-%-----------------------------------------------------------------------------------------
-%--------- COMPUTE proposed weight changes internal to RNN
         % ACTR formulation
-        delta_J = -eta_J .* e .* PE .* eta_DA_mult;
-                                                                                                            %         VERSION WHERE DA==PE
-                                                                                                            %         delta_J = -eta_J .* e .* PE;
+        delta_J = -eta_J .* e .* PE .* (stim_bonus + eta_DA_mult);
         
         % Prevent too large changes in weights
         percentClipped(curr_cond) = sum(delta_J(:) > max_delta_J | delta_J(:) < -max_delta_J) / size(delta_J,1)^2 * 100;
@@ -340,16 +306,10 @@ while pass <= 800 % stop when reward collection is very good
         % Update the weight matrix
         net_out.J = net_out.J + delta_J;
 
-%-----------------------------------------------------------------------------------------
-%--------- COMPUTE the proposed weight changes at INPUTS        
+%------------ Calculate the proposed weight changes at inputs
+        
         % ACTR formulation
-        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (0.1+trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* eta_DA_mult);
-%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* (error_r*(error_r>0)) .* (stim_bonus + eta_DA_mult) ) + ( net_out.wIn(net.oUind,2) .* eta_wIn .* (error_r*(error_r<0)) .* (stim_bonus + eta_DA_mult) );
-%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
-%         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
-
-                                                                                                            % VERSION WHERE DA==PE
-                                                                                                            %         net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r );
+        net_out.wIn(net.oUind,2) = net_out.wIn(net.oUind,2) + ( (trans_sat-net_out.wIn(net.oUind,2)) .* eta_wIn .* error_r .* (stim_bonus + eta_DA_mult) );
         
         if net_out.wIn(net.oUind,2)>=trans_sat
             net_out.wIn(net.oUind,2)=trans_sat;
@@ -359,32 +319,24 @@ while pass <= 800 % stop when reward collection is very good
         
         trans_sat_c = trans_sat;
         % ACTR formulation
-        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (0.1+trans_sat_c-net_out.wIn(net.oUind,1)) * eta_wIn .* error_c .* eta_DA_mult ); 
-%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
-%         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
-
-                                                                                                            % VERSION WHERE DA==PE
-                                                                                                            %         net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c );        
+        net_out.wIn(net.oUind,1) = net_out.wIn(net.oUind,1) + ( (trans_sat_c-net_out.wIn(net.oUind,1)) .* eta_wIn .* error_c .* (stim_bonus + eta_DA_mult) );        
 
         if net_out.wIn(net.oUind,1)>=trans_sat_c
             net_out.wIn(net.oUind,1)=trans_sat_c;
         elseif net_out.wIn(net.oUind,1)<0
             net_out.wIn(net.oUind,1)=0;
         end
-        
 
-%----------------------------------------------------------------
-%------- UPDATE DATA STRUCT
-        net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
-        net_run.pass(pass).plck = numel(find(anticip_lck>1)) / error_reps;
-        net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
+        
+%------------------ Calculate performance error
 
         a_delta_J(curr_cond) = median(abs(delta_J(:))); % Save magnitude of change    
-        a_sum_err(curr_cond) = R_curr(curr_cond); % Save magnitude of error for this condition
+        a_sum_err(curr_cond) = err; % Save magnitude of error for this condition   
        
         % output the error
-        R_bar_prev(curr_cond) = R_bar(curr_cond);
-        R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
+%         R_bar_prev(curr_cond) = R_bar(curr_cond);
+%         R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
+        R_bar(curr_cond) = 0; % no reward term  
                 
         if monitor
             disp(['Err baselined: ' num2str(R_curr(curr_cond)-R_bar(curr_cond)) ' --- delta_J: ' num2str(median(a_delta_J)) ' --- %clipped: ' num2str(median(percentClipped))])
@@ -393,12 +345,12 @@ while pass <= 800 % stop when reward collection is very good
 
 
 %----------------------------------------------------------------
-%-------- CHECK MODEL PERFORMANCE every {update} trials
+%-------- Check overall error every {update} trials
     if mod(pass,update) == 0 || pass == 1
         
         for cond = 1:length(target_list)
             curr_cond   = target_list(cond);
-            curr_input  = input{curr_cond};
+            curr_input  = input_omit{curr_cond};
             curr_target = target{curr_cond};
             
 %----------------------------------------------------------------
@@ -407,66 +359,75 @@ while pass <= 800 % stop when reward collection is very good
             [outputs_omit,hidden_r_omit,hidden_x_omit,e_omit,e_store_omit] = dlRNN_engine(-1,net_out, input_omit{curr_cond},curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);
             [outputs_uncued,hidden_r_uncued,hidden_x_uncued,e_uncued,e_store_uncued] = dlRNN_engine(-1,net_out, input_uncued{curr_cond},curr_target,act_func_handle,learn_func_handle,transfer_func_handle,0);
         
-            err_vector = zeros(1,error_reps);
-            err_vector_x = zeros(1,error_reps);
-            err_vector_y = 1500*ones(1,error_reps);
-            anticip_lck = zeros(1,error_reps);
-            lat_lck = zeros(1,error_reps);
+            err_vector = zeros(1,10);
+            err_vector_x = zeros(1,10);
+            err_vector_y = 1500*ones(1,10);
+            anticip_lck = zeros(1,10);
+            lat_lck = zeros(1,10);
             o_tc = []; o_ti = [];
             
             for qq=1:10
 
                 if pt_on
                     % pass combined anticipatory and reactive output through the transfer function
-                    net_plant_in = (0.5*outputs) + curr_input(2,:)*net_out.wIn(net.oUind,2) + 10*curr_input(1,:)*net_out.wIn(net.oUind,1);
-                    outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);  
+                    net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
+                    outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));  
                         figure(1); clf;
                         plot(net_plant_in); drawnow;
     
-                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale,zeros(1,3000));           
+                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));           
                     
-                    net_plant_in = (0.5*outputs_uncued) + curr_input(2,:)*net_out.wIn(net.oUind,2);
-                    outputs_t_u = transfer_func_handle(net_plant_in./plant_scale,filt_scale);   
+                    net_plant_in = outputs_uncued + curr_input(2,:)*net_out.wIn(net.oUind,2);
+                    outputs_t_u = transfer_func_handle(net_plant_in./plant_scale,filt_scale,zeros(1,numel(net_plant_in)));   
 
                 else
                     % pass output through the transfer function
-                    outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale);           
-                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale);           
-                    outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale);           
+                    outputs_t = transfer_func_handle(outputs./plant_scale,filt_scale,zeros(1,numel(outputs)));           
+                    outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale,zeros(1,numel(outputs)));           
+                    outputs_t_u = transfer_func_handle(outputs_uncued./plant_scale,filt_scale,zeros(1,numel(outputs)));           
                 end
 
-                % Calculate error as a function something like:
+%                 % Calculate error as a function something like:
                 rewTime = find( [0 diff(curr_input(2,:))]>0 , 1 );
-                tmp = find(outputs_t>rewTime,1);
-                if numel(tmp)==1
-                    deltaRew = (outputs_t(tmp)-rewTime);
-                else
-                    deltaRew = size(curr_input,2)-rewTime;
+                if numel(rewTime)==0
+                    rewTime = 2999;
                 end
-                tmp = find(outputs_t_o>rewTime,1);
-                if numel(tmp)==1
-                    deltaRew_o = (outputs_t_o(tmp)-rewTime);
-                else
-                    deltaRew_o = size(curr_input,2)-rewTime;
-                end
-                tmp = find(outputs_t_u>rewTime,1);
-                if numel(tmp)==1
-                    deltaRew_u = (outputs_t_u(tmp)-rewTime);
-                else
-                    deltaRew_u = size(curr_input,2)-rewTime;
-                end
+%                 tmp = find(outputs_t>rewTime,1);
+%                 if numel(tmp)==1
+%                     deltaRew = (outputs_t(tmp)-rewTime);
+%                 else
+%                     deltaRew = size(curr_input,2)-rewTime;
+%                 end
+%                 tmp = find(outputs_t_o>rewTime,1);
+%                 if numel(tmp)==1
+%                     deltaRew_o = (outputs_t_o(tmp)-rewTime);
+%                 else
+%                     deltaRew_o = size(curr_input,2)-rewTime;
+%                 end
+%                 tmp = find(outputs_t_u>rewTime,1);
+%                 if numel(tmp)==1
+%                     deltaRew_u = (outputs_t_u(tmp)-rewTime);
+%                 else
+%                     deltaRew_u = size(curr_input,2)-rewTime;
+%                 end
                 
-                err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
-                                
+%                 err = cost * (  1-exp(-deltaRew/500) ) + (cost * sum(abs(diff(outputs(1,500:1600)))) * w_var); % penalizing oscillatory solutions
+                err = 0;
+                
                 err_vector(qq) = err;
-                err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var);
-                err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
-                anticip_lck(qq) = numel(find(outputs_t<rewTime & outputs_t>500));
-                    anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime & outputs_t_o>500));
-                    anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime & outputs_t_u>500));
-                lat_lck(qq) = deltaRew;
-                    lat_lck_o(qq) = deltaRew_o;
-                    lat_lck_u(qq) = deltaRew_u;
+%                 err_vector_x(qq) = (cost * sum(abs(diff(outputs))) * w_var);
+%                 err_vector_y(qq) = cost * (  1-exp(-deltaRew/500) );
+                err_vector_x(qq) = 0;
+                err_vector_y(qq) = 0;
+                anticip_lck(qq) = numel(find(outputs_t<rewTime & outputs_t>600));
+                    anticip_lck_o(qq) = numel(find(outputs_t_o<rewTime & outputs_t_o>600));
+                    anticip_lck_u(qq) = numel(find(outputs_t_u<rewTime & outputs_t_u>600));
+%                 lat_lck(qq) = deltaRew;
+%                     lat_lck_o(qq) = deltaRew_o;
+%                     lat_lck_u(qq) = deltaRew_u;
+                lat_lck(qq) = 3000;
+                    lat_lck_o(qq) = 3000;
+                    lat_lck_u(qq) = 3000;
                 o_tc = [o_tc outputs_t];
                 o_ti = [o_ti ones(1,numel(outputs_t))*qq];
             end
@@ -488,9 +449,6 @@ while pass <= 800 % stop when reward collection is very good
             R_curr(curr_cond)   = mean(err_vector);
                 net_run.pass(pass).pe   = R_curr(curr_cond)-R_bar(curr_cond);
                 net_run.pass(pass).plck = numel(find(anticip_lck>1)) / 10;
-
-%             R_bar_prev(curr_cond) = R_bar(curr_cond);
-%             R_bar(curr_cond) = alpha_R * R_bar_prev(curr_cond) + (1.0 - alpha_R) * R_curr(curr_cond);  
 
             running_err = [running_err , [mean(err_vector_x) ; mean(err_vector_y)] ];
             running_bar = [running_bar , R_bar(curr_cond) ];
@@ -517,8 +475,6 @@ while pass <= 800 % stop when reward collection is very good
             net_run.pass(pass).sens_gain(curr_cond) = outputs(1610) - outputs(1599);
                 net_run.pass(pass).sens_gain_o(curr_cond) = outputs_omit(1610) - outputs_omit(1599);
                 net_run.pass(pass).sens_gain_u(curr_cond) = outputs_uncued(1610) - outputs_uncued(1599);
-
-            net_run.pass(pass).chk(curr_cond).npi = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
 
             net_run.pass(pass).trans_r(curr_cond)   = net_out.wIn(net.oUind,2);
                 net_run.pass(pass).trans_c(curr_cond)   = net_out.wIn(net.oUind,1);
@@ -557,7 +513,6 @@ while pass <= 800 % stop when reward collection is very good
         end
         
 %-------- ESTIMATE DA response using the Coddington & Dudman 2018 formalism 
-%----------- NOTE: eta_DA_mult should really be a nonlinear function of derivative
 
         sensory_resp = zeros(1,3000);
             dpolicy = round(out_scale_da.*(outputs(1610) - outputs(1599)));        
@@ -622,7 +577,7 @@ while pass <= 800 % stop when reward collection is very good
         pred_da_time = zeros(1,size(hidden_r,2));
         pred_da_time_cue = zeros(1,size(hidden_r,2));
         for qq=1:error_reps
-            [outputs_t,state] = transfer_func_handle(outputs./plant_scale,filt_scale);
+            [outputs_t,state] = transfer_func_handle(outputs./plant_scale,filt_scale,zeros(1,numel(outputs)));
             all_inits = find([0 diff(state)]==1);
             cons_inits = find(all_inits>rewTime,1);
             if cons_inits>1
@@ -647,6 +602,7 @@ while pass <= 800 % stop when reward collection is very good
             end
         end
 
+        
         if numel(find(init_consume>0))>0
             pred_da_time(round(mean(init_consume(init_consume>0)))) = ( net_out.wIn(net.oUind,2)./trans_sat ); % scale by probability of reactive init
         end
@@ -657,7 +613,7 @@ while pass <= 800 % stop when reward collection is very good
         % Find state transitions in behavior
         pred_da_time_u = zeros(1,size(hidden_r_uncued,2));
         for qq=1:error_reps
-            [outputs_t_u,state_u] = transfer_func_handle(outputs_uncued,filt_scale);
+            [outputs_t_u,state_u] = transfer_func_handle(outputs_uncued,filt_scale,zeros(1,numel(outputs)));
             all_inits_u = find([0 diff(state_u)]==1);
             cons_inits_u = find(all_inits_u>rewTime,1);
             if numel(cons_inits_u)>0
@@ -679,7 +635,7 @@ while pass <= 800 % stop when reward collection is very good
         pred_da_time_o = zeros(1,size(hidden_r_omit,2));
         pred_da_time_o_cue = zeros(1,size(hidden_r_omit,2));
         for qq=1:error_reps
-            [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale,zeros(1,3000));
+            [outputs_t_o,state_o] = transfer_func_handle(outputs_omit,filt_scale,zeros(1,numel(outputs)));
             all_inits_o = find([0 diff(state_o)]==1);
             cons_inits_o = find(all_inits_o>rewTime+40,1);
             if numel(cons_inits_o)>0 
@@ -698,7 +654,7 @@ while pass <= 800 % stop when reward collection is very good
             pred_da_time_o(round(mean(init_consume_o(init_consume_o>0)))) = ( net_out.wIn(net.oUind,1)./trans_sat ); % scale by probability of reactive init
         end
 
-        pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same') + conv(pred_da_time_o_cue,da_imp_resp_f_oi,'same') ];
+        pred_da_move_o = [ pred_da_move_o ; conv(pred_da_time_o,da_imp_resp_f_oi,'same') ];
         pred_da_sense_o = [ pred_da_sense_o ; conv(pred_da_stime_o,da_imp_resp_f_se,'same') ];
         
         

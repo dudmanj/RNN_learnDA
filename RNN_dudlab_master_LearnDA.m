@@ -1,4 +1,4 @@
-%% RNN-dudlab-master_learnDA
+%% RNN_dudlab_master_learnDA
 % High level script to control the construction and training of RNNs
  
 % Current ideas about future development:
@@ -487,7 +487,7 @@ for jj=1:generations
     % make sure require net to amplify sensory inputs
 %     net.wIn(net.oUind,1) = 0.5;
 %     net.wIn(net.oUind,2) = 1;
-    net.wIn(net.oUind,1) = 0;
+    net.wIn(net.oUind,1) = 5;
     net.wIn(net.oUind,2) = 0;
 
 
@@ -523,6 +523,12 @@ for jj=1:generations
     gens.dets(jj).err = test_error;
     gens.dets(jj).out = mean(export_outputs,1);
 
+
+    net.wIn(net.oUind,1) = 0;
+    net.wIn(net.oUind,2) = 0;
+    [test_error,export_outputs,hidden_r,lag,err_ant,ant_lck] = dlRNN_evolve(net,input,target,act_func_handle,learn_func_handle,transfer_func_handle,50);
+    evol.outI(jj,:) = mean(export_outputs,1);
+    
 end
 
 %% Plot output of the evolved networks
@@ -537,11 +543,13 @@ end
 [bb,ii]=sort(evol.err);
 [bbb,iii]=sort(evol.lag);
 
-figure(9); subplot(1,6,1:2); imagesc(evol.out(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
-subplot(1,6,3); plot(evol.lag(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Collect latency');
-subplot(1,6,4); plot(evol.p(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Sparsity');
-subplot(1,6,5); semilogx(evol.g(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('g');
-subplot(1,6,6); plot(abs(evol.eig(ii)),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('eig'); set(gca,'TickDir','out');
+figure(9); 
+subplot(1,6,1:3); imagesc(evol.out(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
+subplot(1,6,4:6); imagesc(evol.outI(ii,:),[-1 1]); colormap(cm); ylabel('Generations');  xlabel('Time'); box off;
+% subplot(1,6,3); plot(evol.lag(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Collect latency');
+% subplot(1,6,4); plot(evol.p(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off; xlabel('Sparsity');
+% subplot(1,6,5); semilogx(evol.g(ii),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('g');
+% subplot(1,6,6); plot(abs(evol.eig(ii)),1:generations,'k.'); set(gca,'YDir','reverse'); box off;  xlabel('eig'); set(gca,'TickDir','out');
 
 
 figure(8); clf;
@@ -573,7 +581,7 @@ figure(11); clf; plot(eig(gens.dets(ii(1)).net.J),'o'); hold on; plot(eig(gens.d
 
 figure(12); clf; % plot a bunch of example outputs
 indices = [ii(1) ii(randperm(500,10))];
-[cost_map] = TNC_CreateRBColormap(max(evol.lag),'wblue');
+[cost_map] = TNC_CreateRBColormap(ceil(max(evol.lag)),'wblue');
 
 for index=indices
     net = gens.dets(index).net;
@@ -589,7 +597,7 @@ title('Optimal evolved '); box off; ylabel('Output unit'); axis([0 numel(gens.de
 % index=ii(101)
 % index=ii(102)
 % index=ii(103)
-index=ii(156)
+index=ii(159)
 
 % index=ii(round(generations/2))
 gens.dets(index).net.g
@@ -615,18 +623,10 @@ plot(bin_dat.bins.center,bin_dat.bins.avg,'ko','MarkerSize',10,'MarkerFace','k')
 plot(0:0.1:9,polyval(emp_ant_cost,0:0.1:9),'r-');
 
 %% train the RNN
-% stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1];
-% stim_list = [stim_list stim_list stim_list];
-stim_list = zeros(1,36);
-% stim_list = [zeros(1,9) ones(1,9)*2];
-
-% inits = repmat([ii(101) ii(102) ii(103)],1,9);
-
-% inits = repmat([ii(156) ii(146) ii(150)],1,6);
-
-% inits = repmat(ii([156 150 189 173 197 210 218 209 164]),1,2);
-% inits = repmat(ii([156 150 189]),1,6);
-inits = repmat(ii([166 156 157 160 173 189]),1,6);
+stim_list = [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 ];
+% stim_list = zeros(1,36);
+% inits = repmat(ii([141 159 166 176 191 150]),1,6);
+inits = repmat(ii([141 96 100 110 104 55]),1,6);
 
 switch simulation_type
    
@@ -646,10 +646,10 @@ switch simulation_type
                 net_init.wIn(net.oUind,:) = [0 0];
                 tau_trans = 1; % now controls wJ learning rate
             else
-                net_init.wIn = net_init.wIn*3;
+%                 net_init.wIn = net_init.wIn*3;
 %                 net_init.wIn(net.oUind,:) = [0 2];
-%                 net_init.wIn(net.oUind,:) = [0 0];
-                net_init.wIn(net.oUind,:) = [0 .33];
+                net_init.wIn(net.oUind,:) = [0 0];
+%                 net_init.wIn(net.oUind,:) = [0 .33];
                 tau_trans = 1; % now controls wJ learning rate
             end
             
@@ -657,12 +657,16 @@ switch simulation_type
 
             % stim scalar determines whether a control (0) or lick- (-1) or lick+ (1) perturbation experiments
             stim = stim_list(g);
-            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
+            [output,net_out,pred_da_sense,pred_da_move,pred_da_move_u,pred_da_sense_u,pred_da_move_o,pred_da_sense_o] = dlRNN_train_learnDA(net_init,input,input_omit,input_uncued,target,act_func_handle,learn_func_handle,transfer_func_handle,65,tau_trans,stim,filt_scale);
 
             run(g).output = output;
             run(g).net = net_out;
             run(g).pred_da_sense = pred_da_sense;
             run(g).pred_da_move = pred_da_move;
+            run(g).pred_da_sense_u = pred_da_sense_u;
+            run(g).pred_da_move_u = pred_da_move_u;
+            run(g).pred_da_sense_o = pred_da_sense_o;
+            run(g).pred_da_move_o = pred_da_move_o;
             disp(['Completed run: ' num2str(g)]);
         end
         
@@ -705,7 +709,7 @@ set(gca,'YDir','normal');
 for g=1:numel(run)
     
     final_output_layer(g,:) = run(g).net.J(1,:);
-    final_lat(g,1) = run(g).output.pass(400).lat;
+    final_lat(g,1) = run(g).output.pass(end).lat;
     
 end
 [vvv,iii] = sort(final_lat);
@@ -810,7 +814,7 @@ figure(503); clf;
     shadedErrorBar( [1:200]*run(1).net.update , mean(all_latency_u,1) , std(all_latency_u,[],1)./sqrt(size(all_latency_u,1)) ); hold on;
             ylabel('Latency to collect reward (ms)'); xlabel('Training trial bins');
 %             legend('Cued','Uncued');
-axis([0 200 0 1500]);
+axis([0 200 0 500]);
 
 figure(500); boxplot(trials_to_criterion); ylabel('Trials to criterion');
 

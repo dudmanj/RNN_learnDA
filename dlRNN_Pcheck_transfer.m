@@ -1,11 +1,19 @@
-function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale)
+function [checks,varargout] = dlRNN_Pcheck_transfer(activity,filt_scale,varargin)
 
 option = 'state_simple';
 % trans_prob = 'non-linear';
 trans_prob = 'pass-thru';
 plotFlag = 0;
-reaction_time = 150;
+reaction_time = 100;
 
+if nargin==2
+    reward=[1*ones(1,1600) 100*ones(1,1400)];
+    back_p_logic = 1;
+else
+    reward = varargin{1};
+    back_p_logic = 0;
+end
+        
 % Original idea was just to scale this down
 plant_scale = filt_scale; 
 
@@ -80,16 +88,14 @@ switch option
         checks_tmp      = zeros(1,numel(activity));
         norm_activity   = zeros(1,numel(activity));
 %         back_p          = exp(([1:numel(activity)]-numel(activity)-3)./150);
-        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./200);
-%         back_p          = exp(([1:numel(activity)]-numel(activity)-3)./25);
+%         back_p          = exp(([1:numel(activity)]-numel(activity)-3)./200);
+        back_p          = exp(([1:numel(activity)]-numel(activity)-3)./100);
         lick_template   = zeros(1,numel(activity));
         lick_template(1:150:numel(activity)) = 1;
         
-        norm_activity     = activity + back_p;
+        norm_activity     = activity + (back_p*back_p_logic);
         rand_chks          = rand(1,numel(activity));
-        
-        reward=[1*ones(1,1600) 100*ones(1,1400)];
-            
+                    
         for pp=1:numel(activity)-1
             
             act_p = norm_activity(pp);
@@ -117,7 +123,7 @@ switch option
             for kk=1:numel(tmp)
                 if numel([tmp(kk):tmp_neg(kk)]) > 100 | tmp(kk)>numel(activity)-100
 %                     offset = round(10*rand(1));
-                    offset = randperm(150,1);
+                    offset = randperm(60,1);
                     if tmp_neg(kk)+offset > numel(activity)
                         checks_tmp(tmp(kk)+offset:numel(activity)) = lick_template(1:numel([tmp(kk)+offset:numel(activity)]));
                     else
