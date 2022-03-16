@@ -70,7 +70,7 @@ tau         = 30;
 dt_div_tau  = dt/tau;
 alpha_R     = 0.75;
 alpha_X     = 0.33;
-eta_J       = 1e-3;% .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
+eta_J       = 0.5e-3;% .* tau_trans;             % {1e-5 1e-4} range seems most stable for learning
 eta_wIn     = 1./125 .* tau_trans;     % best data match around 30-40 for tau_trans
 wIn_scaling = 10;                       % Modifying input update rate for critic component
 tau_wIn = 0.5; % roughly 1/3 of membrane tau
@@ -116,7 +116,7 @@ for cond = 1:length(target_list)
             
             if pt_on
                 % pass combined anticipatory and reactive output through the transfer function
-                net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2);
+                net_plant_in = (0.5*outputs) + curr_input(2,:)*net_out.wIn(net.oUind,2) + 10*curr_input(1,:)*net_out.wIn(net.oUind,1);
                 outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
             else
                 % pass output through the transfer function
@@ -199,7 +199,7 @@ while pass <= 800 % stop when reward collection is very good
 
             if pt_on
                 % pass combined anticipatory and reactive output through the transfer function
-                net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2) + curr_input(1,:)*net_out.wIn(net.oUind,1);
+                net_plant_in = (0.5*outputs) + curr_input(2,:)*net_out.wIn(net.oUind,2) + 10*curr_input(1,:)*net_out.wIn(net.oUind,1);
                 outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);            
             else
                 % pass output through the transfer function
@@ -418,14 +418,14 @@ while pass <= 800 % stop when reward collection is very good
 
                 if pt_on
                     % pass combined anticipatory and reactive output through the transfer function
-                    net_plant_in = outputs + curr_input(2,:)*net_out.wIn(net.oUind,2)  + curr_input(1,:)*net_out.wIn(net.oUind,1);
+                    net_plant_in = (0.5*outputs) + curr_input(2,:)*net_out.wIn(net.oUind,2) + 10*curr_input(1,:)*net_out.wIn(net.oUind,1);
                     outputs_t = transfer_func_handle(net_plant_in./plant_scale,filt_scale);  
                         figure(1); clf;
                         plot(net_plant_in); drawnow;
     
                     outputs_t_o = transfer_func_handle(outputs_omit./plant_scale,filt_scale,zeros(1,3000));           
                     
-                    net_plant_in = outputs_uncued + curr_input(2,:)*net_out.wIn(net.oUind,2);
+                    net_plant_in = (0.5*outputs_uncued) + curr_input(2,:)*net_out.wIn(net.oUind,2);
                     outputs_t_u = transfer_func_handle(net_plant_in./plant_scale,filt_scale);   
 
                 else

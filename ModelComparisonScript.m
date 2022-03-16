@@ -1063,18 +1063,22 @@ figure(604); clf;
 subplot(2,2,1);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.da(20:60,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.da(20:60,:,:),1),3),'linewidth',2,'color','k'); hold on;
+axis([0 1000 -1e-4 1.5e-3]); box off;
 
 subplot(2,2,2);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.da(80:120,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.da(80:120,:,:),1),3),'linewidth',2,'color','k'); hold on;
+axis([0 1000 -1e-4 1.5e-3]); box off;
 
 subplot(2,2,3);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(20:60,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.lk(20:60,:,:),1),3),'linewidth',2,'color','k'); hold on;
+axis([0 1000 -1e-4 3e-3]); box off;
 
 subplot(2,2,4);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(80:120,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.lk(80:120,:,:),1),3),'linewidth',2,'color','k'); hold on;
+axis([0 1000 -1e-4 3e-3]); box off;
 
 
 %% 6.5 Plot figure panels for comparisons
