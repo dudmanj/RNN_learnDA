@@ -17,7 +17,7 @@ tmp = repmat([1 1.25 1.5 1.75],6,1);
 wIn_vec = tmp(1:numel(tmp));
 % tau_vec = ones(1,num_sims)*2;
 tau_vec = tmp(1:numel(tmp))+1;
-% sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
+sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
 clear run;
 
@@ -261,8 +261,8 @@ for g=1:numel(run)
     end
 
 end
-% legend(label_txt);
 
+% legend(label_txt);
 % figure(); plot3(summary_data.analysis(1).lat(1,:),summary_data.analysis(1).ant(1,:),summary_data.analysis(1).cost(1,:));
 
 %% 2. Cued-DA stim simulation experiments in ACTR
@@ -709,9 +709,9 @@ end
 
 % save ~/'Dropbox (HHMI)'/run-stim2 run stim_list inits
 
-% 6.5 DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
+%% 6.5 DA and Licking predictions for stimLick-, stimLick+, Stim++Lick+
 
-% clear summary_data;
+clear summary_data;
 
 % Also need to add in 21 and 22 conditions (critic only predictions)
 stim_map = [[57 181 74] ; [102 45 145 ] ; [158 31 99] ]/255;
@@ -978,6 +978,8 @@ for qq=1:8 % hundred trial bins
     summary_data.analysis(6).lk.plus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlus.ant(curr_bin,:),1) ,2);
     summary_data.analysis(6).lk.plus_sd(qq) = std( mean(summary_data.analysis(6).stimPlus.ant(curr_bin,:),1) ,[],2);
 
+    summary_data.analysis(6).lk.pplus_avgS(qq) = mean( mean(summary_data.analysis(6).stimPlusPlus.ant(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lk.pplus_sdS(qq) = std( mean(summary_data.analysis(6).stimPlusPlus.ant(curr_bin,:),1) ,[],2);
     summary_data.analysis(6).lk.pplus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlusPlus.antC(curr_bin,:),1) ,2);
     summary_data.analysis(6).lk.pplus_sd(qq) = std( mean(summary_data.analysis(6).stimPlusPlus.antC(curr_bin,:),1) ,[],2);
     
@@ -1079,6 +1081,23 @@ subplot(2,2,4);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(80:120,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.lk(80:120,:,:),1),3),'linewidth',2,'color','k'); hold on;
 axis([0 1000 -1e-4 3e-3]); box off;
+
+
+% SUPPLEMENT FIGURE
+figure(605); clf; % cued DA & cued licking for stim and cntrl over learning, 100 trials bins for Stim++Lick+ (case 20)
+subplot(211);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.cntrl_avg,summary_data.analysis(6).cueDA.cntrl_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color','k');
+errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.pplus_avg,summary_data.analysis(6).cueDA.pplus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(3,:));
+axis([0 800 -0.1 0.5]); box off; xlabel('Trials'); ylabel('Cued DA resp. (au)');
+
+subplot(212);
+plot([0 800],[0 0],'k--'); hold on;
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.cntrl_avg,summary_data.analysis(6).lk.cntrl_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color','k');
+errorbar((cntrs-1)*5,summary_data.analysis(6).lk.pplus_avgS,summary_data.analysis(6).lk.pplus_sdS./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(3,:));
+% axis([0 800 1 7]); 
+box off; xlabel('Trials'); ylabel('Cued licks (Hz)');
+
 
 
 %% 6.5 Plot figure panels for comparisons

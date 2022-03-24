@@ -26,7 +26,7 @@ ylabel('Final collection latency (ms)');
 
 figure(302);
 [p,atab,stats] = anova1(([final_latency.daaspe' final_latency.deplete' final_latency.nophasic' final_latency.beta']));
-[c,m,h,nms] = multcompare(stats,'display','on')
+[c,m,h,nms] = multcompare(stats,'display','on','estimate','friedman')
 
 % [p,h] = ranksum(final_latency.nobeta', final_latency.beta')
 
