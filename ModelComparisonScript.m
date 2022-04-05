@@ -17,7 +17,7 @@ tmp = repmat([1 1.25 1.5 1.75],6,1);
 wIn_vec = tmp(1:numel(tmp));
 % tau_vec = ones(1,num_sims)*2;
 tau_vec = tmp(1:numel(tmp))+1;
-% sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
+sat_vec = [randperm(6) randperm(6) randperm(6) randperm(6)]+4;
 
 clear run;
 
@@ -183,6 +183,9 @@ for g=1:numel(run)
 %             summary_data.analysis(1).ant(scnt,cnt)      = numel(find(run(g).output.pass(gg).chk.v > 1100 & run(g).output.pass(gg).chk.v > 1600));
             summary_data.analysis(1).outs(scnt,:,cnt)   = run(g).output.pass(gg).chk.o;
             summary_data.analysis(1).ant(scnt,cnt) = run(g).output.pass(gg).anticip;
+
+            summary_data.analysis(1).cued_lat(scnt,cnt) = run(g).output.pass(gg).lat;
+            summary_data.analysis(1).uncued_lat(scnt,cnt) = run(g).output.pass(gg).lat_u;
 
             label_txt{scnt} = [num2str(inits(g)) '-' num2str(tau_vec(g),2) '-' num2str(wIn_vec(g),1)];
 
@@ -1314,3 +1317,26 @@ figure(602); clf;
     shadedErrorBar( [1:200]*run(1).net.update , mean(all_latency_u,1) , std(all_latency_u,[],1)./sqrt(size(all_latency_u,1)) ); hold on;
     ylabel('Latency to collect reward (ms)'); xlabel('Training trial bins');
     axis([0 200 0 500]);
+
+%% Quick simple script to examine latency to collect reward and cue dependence    
+scnt = 1;
+clear summary_data;
+inds = 1:numel(run);
+
+for g=1:numel(run)
+
+    if stim_list(g)==0 % Only use Cntrl simulations
+
+        cnt = 1;
+        for gg=[1 run(g).net.update:run(g).net.update:numel(run(g).output.pass)] % Just examine the probed trials
+
+            summary_data.analysis(1).cued_lat(scnt,cnt) = run(g).output.pass(gg).lat;
+            summary_data.analysis(1).uncued_lat(scnt,cnt) = run(g).output.pass(gg).lat_u;
+            cnt = cnt+1;
+
+        end
+        scnt = scnt+1;
+    end
+
+end
+
