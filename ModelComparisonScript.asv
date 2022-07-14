@@ -1187,6 +1187,8 @@ axis([0 800 -1 1]);
 ylabel('cued DA - ctrl (au)');
 xlabel('trials'); box off;
 
+%% 8 Compare models that learn from RPE and models that learn from PEs t
+
 %% DEPRECATED CODE
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
 lk_kern = TNC_CreateGaussian(500,40,1000,1);
