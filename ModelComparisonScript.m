@@ -45,7 +45,7 @@ parfor g = 1:numel(stim_list)
 
 end
 
-% save ~/'Dropbox (HHMI)'/run-ctrl run stim_list inits
+save ~/'Dropbox (HHMI)'/run-ctrl-PEstim run stim_list inits
 % save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-PhasicKO run stim_list inits
 % save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-DADeplete run stim_list inits
 % save ~/'Dropbox (HHMI)'/run-ctrl-noC-good-WithBeta run stim_list inits
@@ -1290,7 +1290,7 @@ subplot(2,4,8);
 shadedErrorBar(-1600:1399,mean(tmp,1),std(tmp,[],1)); hold on; axis([-1700 1500 -0.001 0.011]);
 box off; xlabel('Time from stim (ms)'); ylabel('ACTR simulated DA response (a.u.)');
 
-%% Summary display plot for talks of training experience.
+% Summary display plot for talks of training experience.
 
 % To plot:
 
@@ -1307,7 +1307,7 @@ box off; xlabel('Time from stim (ms)'); ylabel('ACTR simulated DA response (a.u.
 %     run(1).output.pass(1).lat_u
 %     run(1).output.pass(1).lat_o
 
-%% Comparison across distinct run types
+% Comparison across distinct run types
 stim_cat = unique(stim_list);
 stim_labels = { 'Lick-','Control','Lick+','Stim++Lick+' };
 figure(601); clf;
