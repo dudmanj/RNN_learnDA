@@ -1,4 +1,3 @@
 # RNN_learnDA
 An RNN-based reinforcement learning model
-
-Luke trying out an edit
+associated with: https://www.biorxiv.org/content/10.1101/2021.05.31.446464v2

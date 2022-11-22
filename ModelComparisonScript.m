@@ -982,6 +982,11 @@ for qq=1:8 % hundred trial bins
     summary_data.analysis(6).lk.pplus_sdS(qq) = std( mean(summary_data.analysis(6).stimPlusPlus.ant(curr_bin,:),1) ,[],2);
     summary_data.analysis(6).lk.pplus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlusPlus.antC(curr_bin,:),1) ,2);
     summary_data.analysis(6).lk.pplus_sd(qq) = std( mean(summary_data.analysis(6).stimPlusPlus.antC(curr_bin,:),1) ,[],2);
+
+    
+    summary_data.analysis(6).lat.cntrl_avg(qq) = mean( mean(summary_data.analysis(6).cntrl.lat(curr_bin,:),1) ,2);
+    summary_data.analysis(6).lat.pplus_avg(qq) = mean( mean(summary_data.analysis(6).stimPlusPlus.lat(curr_bin,:),1) ,2);
+    
     
     summary_data.analysis(6).lk.cminus_avg(qq) = mean( mean(summary_data.analysis(6).critM.ant(curr_bin,:),1) ,2);
     summary_data.analysis(6).lk.cminus_sd(qq) = std( mean(summary_data.analysis(6).critM.ant(curr_bin,:),1) ,[],2);
@@ -1075,30 +1080,35 @@ axis([0 1000 -1e-4 1.5e-3]); box off;
 subplot(2,2,3);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(20:60,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.lk(20:60,:,:),1),3),'linewidth',2,'color','k'); hold on;
-axis([0 1000 -1e-4 3e-3]); box off;
+axis([0 2000 -1e-4 9e-3]); box off;
 
 subplot(2,2,4);
 plot(mean(mean(summary_data.analysis(6).stimPlusPlus.lk(80:120,:,:),1),3),'linewidth',2,'color',stim_map(3,:)); hold on;
 plot(mean(mean(summary_data.analysis(6).cntrl.lk(80:120,:,:),1),3),'linewidth',2,'color','k'); hold on;
-axis([0 1000 -1e-4 3e-3]); box off;
+axis([0 2000 -1e-4 9e-3]); box off;
 
 
 % SUPPLEMENT FIGURE
 figure(605); clf; % cued DA & cued licking for stim and cntrl over learning, 100 trials bins for Stim++Lick+ (case 20)
-subplot(211);
+subplot(311);
 plot([0 800],[0 0],'k--'); hold on;
 errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.cntrl_avg,summary_data.analysis(6).cueDA.cntrl_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color','k');
 errorbar((cntrs-1)*5,summary_data.analysis(6).cueDA.pplus_avg,summary_data.analysis(6).cueDA.pplus_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(3,:));
 axis([0 800 -0.1 0.5]); box off; xlabel('Trials'); ylabel('Cued DA resp. (au)');
 
-subplot(212);
+subplot(312);
 plot([0 800],[0 0],'k--'); hold on;
 errorbar((cntrs-1)*5,summary_data.analysis(6).lk.cntrl_avg,summary_data.analysis(6).lk.cntrl_sd./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color','k');
 errorbar((cntrs-1)*5,summary_data.analysis(6).lk.pplus_avgS,summary_data.analysis(6).lk.pplus_sdS./sqrt(size(summary_data.analysis(6).cntrl.ant,2)),'linewidth',2,'color',stim_map(3,:));
 % axis([0 800 1 7]); 
 box off; xlabel('Trials'); ylabel('Cued licks (Hz)');
 
-
+subplot(313);
+plot([0 800],[0 0],'k--'); hold on;
+plot([0 (cntrs-1)*5],[mean(summary_data.analysis(6).cntrl.lat(1,:)) summary_data.analysis(6).lat.cntrl_avg],'linewidth',2,'color','k');
+plot([0 (cntrs-1)*5],[mean(summary_data.analysis(6).stimPlusPlus.lat(1,:)) summary_data.analysis(6).lat.pplus_avg],'linewidth',2,'color',stim_map(3,:));
+box off; xlabel('Trials'); ylabel('Collect Latency (ms)');
+    
 
 %% 6.5 Plot figure panels for comparisons
 
@@ -1176,7 +1186,6 @@ shadedErrorBar(0:100:800,summary_data.analysis(6).da_spp.avg,summary_data.analys
 axis([0 800 -1 1]);
 ylabel('cued DA - ctrl (au)');
 xlabel('trials'); box off;
-
 
 %% DEPRECATED CODE
 [stim_map] = [1 0 0.67 ; 0 1 0.67 ; 0 0.67 1];
